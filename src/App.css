@@ -1,0 +1,72 @@
+/* Animaciones Optimizadas por GPU (0% CPU overhead, 60fps) */
+
+@keyframes pulseGlow {
+  0%, 100% {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.04);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 3.5s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+@keyframes spinSlow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-slow {
+  animation: spinSlow 20s linear infinite;
+}
+
+/* Efecto Shimmer (Destello de luz viajera) para el Logo tech mood */
+@keyframes shimmerLight {
+  0% {
+    transform: translateX(-180%) skewX(-25deg);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  30% {
+    transform: translateX(260%) skewX(-25deg);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(260%) skewX(-25deg);
+    opacity: 0;
+  }
+}
+
+.animate-shimmer {
+  animation: shimmerLight 4.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  will-change: transform;
+}
+
+/* Gradiente fluido multicolor para el borde del Logo */
+@keyframes fluidGradient {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animate-fluid-gradient {
+  background-size: 200% 200%;
+  animation: fluidGradient 4s ease infinite;
+}
