@@ -3,7 +3,7 @@ import {
   ShieldCheck, Lock, Unlock, Search, RefreshCw, Copy, Check,
   Edit3, Trash2, ExternalLink, Package, Truck, Building2, CheckCircle2,
   AlertTriangle, X, Eye, EyeOff, MessageCircle,
-  FileSpreadsheet, Bike, BarChart3, Navigation, Camera, MapPin
+  FileSpreadsheet, Bike, BarChart3, Navigation, Camera, MapPin, Key
 } from 'lucide-react';
 import { obtenerPedidos, actualizarPedido, eliminarPedido, verificarEstadoSupabase } from '../services/pedidosService';
 import { descargarExcelMasivoShalom } from '../utils/shalomExcelExport';
@@ -114,6 +114,7 @@ const AdminDashboard = ({ onVerRastreo }) => {
   const [formEdicion, setFormEdicion] = useState({
     numero_guia: '',
     codigo_seguridad: '',
+    codigo_recojo: '',
     link_rastreo: '',
     tipo_mercaderia: 'PAQUETE XS',
     distrito_lima: '',
@@ -228,6 +229,7 @@ const AdminDashboard = ({ onVerRastreo }) => {
     setFormEdicion({
       numero_guia: p.numero_guia || '',
       codigo_seguridad: p.codigo_seguridad || '',
+      codigo_recojo: p.codigo_recojo || '',
       link_rastreo: p.link_rastreo || '',
       tipo_mercaderia: p.tipo_mercaderia || 'PAQUETE XS',
       distrito_lima: p.distrito_lima || '',
@@ -288,7 +290,8 @@ const AdminDashboard = ({ onVerRastreo }) => {
 
       const res = await actualizarPedido(pedidoEditando.id, {
         numero_guia: formEdicion.numero_guia.trim(),
-        codigo_seguridad: formEdicion.codigo_seguridad.trim(),
+        codigo_seguridad: formEdicion.codigo_seguridad ? formEdicion.codigo_seguridad.trim().toUpperCase() : null,
+        codigo_recojo: formEdicion.codigo_recojo ? formEdicion.codigo_recojo.trim().toUpperCase() : null,
         link_rastreo: formEdicion.link_rastreo.trim() || null,
         tipo_mercaderia: formEdicion.tipo_mercaderia || 'PAQUETE XS',
         distrito_lima: formEdicion.distrito_lima.trim() || null,
@@ -464,9 +467,10 @@ const AdminDashboard = ({ onVerRastreo }) => {
           `• *Courier:* ${courierNombre}`,
           `• *Agencia:* ${agencia}`,
           tieneGuia ? `• *N° de Guía:* ${p.numero_guia}` : null,
-          p.codigo_seguridad ? `• *Clave de retiro:* ${p.codigo_seguridad}` : null,
+          p.codigo_recojo ? `• *Código de Seguridad de Recojo:* ${p.codigo_recojo} 🔑 (Indispensable para entrega)` : null,
+          p.codigo_seguridad ? `• *Clave de Consulta Web:* ${p.codigo_seguridad}` : null,
           ``,
-          `⚠️ Recuerda acudir con tu DNI físico para el retiro. ¡Cualquier consulta estamos a tu disposición!`
+          `⚠️ Recuerda acudir con tu DNI físico y dictar tu *Código de Seguridad de Recojo* en ventanilla para el retiro de tu compra. ¡Cualquier consulta estamos a tu disposición!`
         ].filter(Boolean);
         msg = lineas.join('\n');
       } else if (tieneGuia) {
@@ -478,7 +482,8 @@ const AdminDashboard = ({ onVerRastreo }) => {
           `• *Courier:* ${courierNombre}`,
           `• *Agencia de destino:* ${agencia}`,
           `• *N° de Guía:* ${p.numero_guia}`,
-          p.codigo_seguridad ? `• *Clave de retiro:* ${p.codigo_seguridad}` : null,
+          p.codigo_recojo ? `• *Código de Seguridad de Recojo:* ${p.codigo_recojo} 🔑` : null,
+          p.codigo_seguridad ? `• *Clave de Consulta Web:* ${p.codigo_seguridad}` : null,
           ``,
           `Te estaremos notificando cuando se encuentre listo para recojo en la agencia. ¡Muchas gracias por tu compra!`
         ].filter(Boolean);
@@ -491,9 +496,10 @@ const AdminDashboard = ({ onVerRastreo }) => {
           `📦 Te confirmamos que tu envío a provincia está registrado con los siguientes datos:`,
           `• *Courier:* ${courierNombre}`,
           `• *Agencia de destino:* ${agencia}`,
+          p.codigo_recojo ? `• *Código de Seguridad de Recojo:* ${p.codigo_recojo} 🔑` : null,
           ``,
           `Tu paquete se encuentra en preparación para despacho. En cuanto emitamos tu guía oficial te estaremos compartiendo los datos para su seguimiento. ¡Gracias por confiar en tech mood!`
-        ];
+        ].filter(Boolean);
         msg = lineas.join('\n');
       }
     }
@@ -1472,19 +1478,44 @@ const AdminDashboard = ({ onVerRastreo }) => {
                         ) : (
                           <div>
                             {p.numero_guia ? (
+                              <div className="space-y-0.5">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className="font-mono font-bold text-white">{p.numero_guia}</span>
+                                  {p.codigo_recojo && (
+                                    <span 
+                                      className="px-1.5 py-0.5 rounded bg-amber-500/20 border border-amber-500/40 text-amber-300 font-mono text-[10px] font-bold inline-flex items-center gap-1 shadow-sm"
+                                      title="Código de Seguridad de Recojo (Ventanilla Shalom)"
+                                    >
+                                      <Key className="w-2.5 h-2.5 text-amber-400" />
+                                      <span>Recojo: {p.codigo_recojo}</span>
+                                    </span>
+                                  )}
+                                  {p.codigo_seguridad && (
+                                    <span 
+                                      className="px-1.5 py-0.5 rounded bg-neutral-800 border border-neutral-700 text-neutral-300 font-mono text-[10px]"
+                                      title="Clave de Consulta Web Shalom"
+                                    >
+                                      Web: {p.codigo_seguridad}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            ) : (
                               <div>
-                                <span className="font-mono font-bold text-white">{p.numero_guia}</span>
-                                {p.codigo_seguridad && (
-                                  <span className="ml-1.5 px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/30 text-amber-400 font-mono text-[10px]">
-                                    Clave: {p.codigo_seguridad}
+                                <span className="text-[11px] text-amber-400/90 italic font-medium flex items-center gap-1">
+                                  <AlertTriangle className="w-3 h-3" />
+                                  <span>Sin emitir</span>
+                                </span>
+                                {p.codigo_recojo && (
+                                  <span 
+                                    className="mt-1 px-1.5 py-0.5 rounded bg-amber-500/20 border border-amber-500/40 text-amber-300 font-mono text-[10px] font-bold inline-flex items-center gap-1 shadow-sm"
+                                    title="Código de Seguridad de Recojo asignado"
+                                  >
+                                    <Key className="w-2.5 h-2.5 text-amber-400" />
+                                    <span>Recojo: {p.codigo_recojo}</span>
                                   </span>
                                 )}
                               </div>
-                            ) : (
-                              <span className="text-[11px] text-amber-400/90 italic font-medium flex items-center gap-1">
-                                <AlertTriangle className="w-3 h-3" />
-                                <span>Sin emitir</span>
-                              </span>
                             )}
 
                             {/* Enlace rápido: WhatsApp Provincia */}
@@ -1931,21 +1962,38 @@ const AdminDashboard = ({ onVerRastreo }) => {
                       </div>
                     </div>
                   ) : (
-                    <div className="flex items-center justify-between w-full">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between w-full gap-1">
                       <span className="text-[11px] text-neutral-400 font-semibold">Guía Oficial:</span>
                       {p.numero_guia ? (
-                        <div className="flex items-center gap-1.5 font-mono font-bold text-white text-xs">
+                        <div className="flex flex-wrap items-center gap-1.5 font-mono font-bold text-white text-xs">
                           <span>{p.numero_guia}</span>
+                          {p.codigo_recojo && (
+                            <span 
+                              className="px-1.5 py-0.5 rounded bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[10px] inline-flex items-center gap-1"
+                              title="Código de Seguridad de Recojo"
+                            >
+                              <Key className="w-2.5 h-2.5 text-amber-400" />
+                              <span>Recojo: {p.codigo_recojo}</span>
+                            </span>
+                          )}
                           {p.codigo_seguridad && (
-                            <span className="px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[10px]">
-                              Clave: {p.codigo_seguridad}
+                            <span className="px-1.5 py-0.5 rounded bg-neutral-800 border border-neutral-700 text-neutral-300 text-[10px]">
+                              Web: {p.codigo_seguridad}
                             </span>
                           )}
                         </div>
                       ) : (
-                        <span className="text-[11px] text-amber-400 italic font-medium flex items-center gap-1">
-                          <AlertTriangle className="w-3 h-3" /> Sin emitir
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[11px] text-amber-400 italic font-medium flex items-center gap-1">
+                            <AlertTriangle className="w-3 h-3" /> Sin emitir
+                          </span>
+                          {p.codigo_recojo && (
+                            <span className="px-1.5 py-0.5 rounded bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[10px] inline-flex items-center gap-1 font-mono">
+                              <Key className="w-2.5 h-2.5 text-amber-400" />
+                              <span>Recojo: {p.codigo_recojo}</span>
+                            </span>
+                          )}
+                        </div>
                       )}
                     </div>
                   )}
@@ -2236,17 +2284,43 @@ const AdminDashboard = ({ onVerRastreo }) => {
                   </div>
 
                   {pedidoEditando.courier === 'shalom' && (
-                    <div>
-                      <label className="block font-semibold text-amber-400 mb-1.5">
-                        Clave de Seguridad Shalom (Voucher):
-                      </label>
-                      <input
-                        type="text"
-                        maxLength={8}
-                        value={formEdicion.codigo_seguridad}
-                        onChange={(e) => setFormEdicion({ ...formEdicion, codigo_seguridad: e.target.value })}
-                        className="w-full px-3.5 py-2.5 bg-neutral-950 border border-neutral-700 rounded-xl text-white font-mono text-sm focus:outline-none focus:border-amber-500"
-                      />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 rounded-2xl bg-amber-500/5 border border-amber-500/20">
+                      <div>
+                        <div className="flex items-center gap-1.5 mb-1.5">
+                          <Key className="w-3.5 h-3.5 text-amber-400" />
+                          <label className="font-extrabold text-amber-400 text-xs uppercase tracking-wide">
+                            Código de Seguridad de Recojo:
+                          </label>
+                        </div>
+                        <input
+                          type="text"
+                          maxLength={10}
+                          value={formEdicion.codigo_recojo}
+                          onChange={(e) => setFormEdicion({ ...formEdicion, codigo_recojo: e.target.value.toUpperCase() })}
+                          placeholder="Ej: 4821"
+                          className="w-full px-3.5 py-2.5 bg-neutral-950 border border-amber-500/40 rounded-xl text-amber-300 font-mono text-sm font-bold focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400"
+                        />
+                        <span className="text-[10px] text-amber-400/80 mt-1 block">
+                          ⚠️ Código obligatorio para retirar en ventanilla de la agencia Shalom.
+                        </span>
+                      </div>
+
+                      <div>
+                        <label className="block font-semibold text-neutral-300 text-xs mb-1.5 uppercase tracking-wide">
+                          Clave Web Shalom (Voucher):
+                        </label>
+                        <input
+                          type="text"
+                          maxLength={10}
+                          value={formEdicion.codigo_seguridad}
+                          onChange={(e) => setFormEdicion({ ...formEdicion, codigo_seguridad: e.target.value.toUpperCase() })}
+                          placeholder="Ej: ABC12"
+                          className="w-full px-3.5 py-2.5 bg-neutral-950 border border-neutral-700 rounded-xl text-white font-mono text-sm focus:outline-none focus:border-neutral-500"
+                        />
+                        <span className="text-[10px] text-neutral-400 mt-1 block">
+                          Clave para consultar estado en la web/app de Shalom.
+                        </span>
+                      </div>
                     </div>
                   )}
 

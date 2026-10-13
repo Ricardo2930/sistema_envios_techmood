@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { 
   Search, Package, Truck, Building2, CheckCircle2, Clock, 
   MessageCircle, AlertCircle, RefreshCw, Copy, Check,
-  MapPin, ShieldCheck, ArrowRight, Bike, Camera
+  MapPin, ShieldCheck, ArrowRight, Bike, Camera, Key
 } from 'lucide-react';
 import { buscarPedido } from '../services/pedidosService';
 
@@ -530,10 +530,27 @@ const OrderTracking = ({ codigoInicial = '', onIrAFormulario }) => {
                     </span>
                   </div>
 
+                  {pedido.codigo_recojo && (
+                    <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-amber-300 font-bold text-xs flex items-center gap-1.5">
+                          <Key className="w-3.5 h-3.5 text-amber-400" />
+                          <span>Código de Seguridad de Recojo:</span>
+                        </span>
+                        <span className="font-mono font-black text-amber-300 text-sm bg-neutral-950 px-2 py-0.5 rounded border border-amber-500/40 shadow-sm">
+                          {pedido.codigo_recojo}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-amber-400/90 leading-tight">
+                        ⚠️ Presenta este código en ventanilla de la agencia Shalom junto a tu DNI físico para retirar tu paquete.
+                      </p>
+                    </div>
+                  )}
+
                   {pedido.codigo_seguridad && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-neutral-400">Clave de Seguridad Shalom:</span>
-                      <span className="font-mono font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-neutral-400">Clave de Consulta Web:</span>
+                      <span className="font-mono font-bold text-neutral-300 bg-neutral-900 px-2 py-0.5 rounded border border-neutral-800">
                         {pedido.codigo_seguridad}
                       </span>
                     </div>
