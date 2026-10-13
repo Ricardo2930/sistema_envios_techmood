@@ -374,7 +374,7 @@ const AdminDashboard = ({ onVerRastreo }) => {
     if (p.estado === 'en_agencia') {
       return {
         texto: 'En Agencia Destino',
-        clase: 'bg-purple-500/15 text-purple-400 border border-purple-500/30'
+        clase: 'bg-purple-500/15 text-purple-400 border border-purple-500/30 font-bold'
       };
     }
     if (p.estado === 'en_origen') {
@@ -413,10 +413,64 @@ const AdminDashboard = ({ onVerRastreo }) => {
     return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(dirCompleta)}`;
   };
 
-  // URL WhatsApp Cliente (coordinación previa)
+  // URL WhatsApp Cliente (coordinación previa / seguimiento de orden inteligente)
   const obtenerUrlWhatsAppCliente = (p) => {
-    const tel = p.telefono_cliente.replace(/\D/g, '').replace(/^51/, '');
-    const msg = `Hola ${p.nombre_cliente} 👋 Te escribimos de tech mood sobre tu pedido *${p.codigo_seguimiento}*. Tu entrega en *${p.distrito_lima || 'Lima'}* está en proceso de despacho.`;
+    const tel = p.telefono_cliente ? p.telefono_cliente.replace(/\D/g, '').replace(/^51/, '') : '';
+    const esLima = p.tipo_envio === 'lima_metropolitana' || p.courier === 'motorizado' || Boolean(p.distrito_lima);
+
+    let msg = '';
+
+    if (esLima) {
+      msg = `Hola ${p.nombre_cliente} 👋 Te escribimos de tech mood sobre tu pedido *${p.codigo_seguimiento}*. Tu entrega a domicilio en *${p.distrito_lima || 'Lima'}* está en proceso de despacho.`;
+    } else {
+      // Envíos a Provincia: Shalom, Olva, Urbano, etc.
+      const courierNombre = (p.courier || 'Agencia').toUpperCase();
+      const agencia = p.agencia_nombre || 'Agencia asignada';
+      const tieneGuia = Boolean(p.numero_guia && p.numero_guia.trim() !== '');
+
+      if (p.estado === 'en_agencia') {
+        // Paquete disponible para retiro en agencia de destino
+        const lineas = [
+          `¡Hola ${p.nombre_cliente}! 👋 Te escribimos de tech mood sobre tu pedido *${p.codigo_seguimiento}*.`,
+          ``,
+          `🏢 ¡Buenas noticias! Tu paquete ya se encuentra *DISPONIBLE PARA RECOJO* en la agencia:`,
+          `• *Courier:* ${courierNombre}`,
+          `• *Agencia:* ${agencia}`,
+          tieneGuia ? `• *N° de Guía:* ${p.numero_guia}` : null,
+          p.codigo_seguridad ? `• *Clave de retiro:* ${p.codigo_seguridad}` : null,
+          ``,
+          `⚠️ Recuerda acudir con tu DNI físico para el retiro. ¡Cualquier consulta estamos a tu disposición!`
+        ].filter(Boolean);
+        msg = lineas.join('\n');
+      } else if (tieneGuia) {
+        // Paquete con guía oficial emitida (En tránsito o en origen)
+        const lineas = [
+          `¡Hola ${p.nombre_cliente}! 👋 Te escribimos de tech mood sobre tu pedido *${p.codigo_seguimiento}*.`,
+          ``,
+          `🚚 ¡Tu pedido ya fue despachado a provincia! Te compartimos los datos de tu envío:`,
+          `• *Courier:* ${courierNombre}`,
+          `• *Agencia de destino:* ${agencia}`,
+          `• *N° de Guía:* ${p.numero_guia}`,
+          p.codigo_seguridad ? `• *Clave de retiro:* ${p.codigo_seguridad}` : null,
+          ``,
+          `Te estaremos notificando cuando se encuentre listo para recojo en la agencia. ¡Muchas gracias por tu compra!`
+        ].filter(Boolean);
+        msg = lineas.join('\n');
+      } else {
+        // Paquete registrado / en preparación (aún sin emitir guía)
+        const lineas = [
+          `¡Hola ${p.nombre_cliente}! 👋 Te escribimos de tech mood sobre tu pedido *${p.codigo_seguimiento}*.`,
+          ``,
+          `📦 Te confirmamos que tu envío a provincia está registrado con los siguientes datos:`,
+          `• *Courier:* ${courierNombre}`,
+          `• *Agencia de destino:* ${agencia}`,
+          ``,
+          `Tu paquete se encuentra en preparación para despacho. En cuanto emitamos tu guía oficial te estaremos compartiendo los datos para su seguimiento. ¡Gracias por confiar en tech mood!`
+        ];
+        msg = lineas.join('\n');
+      }
+    }
+
     return `https://api.whatsapp.com/send?phone=51${tel}&text=${encodeURIComponent(msg)}`;
   };
 
@@ -1375,6 +1429,29 @@ const AdminDashboard = ({ onVerRastreo }) => {
                                 <span>Sin emitir</span>
                               </span>
                             )}
+
+                            {/* Enlace rápido: WhatsApp Provincia */}
+                            <div className="flex items-center gap-1.5 pt-0.5">
+                              {p.estado === 'entregado' ? (
+                                <span
+                                  className="text-[10px] text-neutral-500 cursor-not-allowed flex items-center gap-0.5 font-medium opacity-60"
+                                  title="WhatsApp de despacho desactivado (pedido ya entregado)"
+                                >
+                                  <span>WhatsApp</span>
+                                </span>
+                              ) : (
+                                <a
+                                  href={obtenerUrlWhatsAppCliente(p)}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-[10px] text-emerald-400 hover:text-emerald-300 flex items-center gap-1 font-medium transition-colors"
+                                  title="Escribir WhatsApp a cliente sobre su envío a provincia"
+                                >
+                                  <MessageCircle className="w-2.5 h-2.5" />
+                                  <span>WhatsApp</span>
+                                </a>
+                              )}
+                            </div>
                           </div>
                         )}
                       </td>
