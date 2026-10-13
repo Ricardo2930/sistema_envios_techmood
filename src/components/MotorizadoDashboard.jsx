@@ -392,6 +392,33 @@ const MotorizadoDashboard = ({ pedidos = [], onActualizar, onCerrarSesion, motor
                   </div>
                 </div>
 
+                {/* Banner de Condición de Pago para el Repartidor */}
+                {!estaEntregado && (
+                  <div className="pt-2">
+                    {p.metodo_pago === 'pagado' ? (
+                      <div className="p-2 sm:p-2.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-between gap-2 text-xs">
+                        <div className="flex items-center gap-1.5 font-bold text-emerald-400">
+                          <CheckCircle2 className="w-4 h-4 shrink-0" />
+                          <span>PAGADO PREVIAMENTE</span>
+                        </div>
+                        <span className="text-[11px] text-emerald-300 font-medium hidden sm:inline">
+                          Solo validar DNI y entregar
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="p-2 sm:p-2.5 rounded-2xl bg-amber-500/15 border border-amber-500/40 flex items-center justify-between gap-2 text-xs">
+                        <div className="flex items-center gap-1.5 font-extrabold text-amber-300">
+                          <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 animate-bounce" />
+                          <span>⚠️ PAGO CONTRAENTREGA</span>
+                        </div>
+                        <span className="text-[11px] text-amber-200 font-semibold text-right">
+                          Esperar confirmación de administración
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Contenido: Datos del Cliente y Domicilio */}
                 <div className="py-3 space-y-2 text-xs sm:text-sm">
                   <div className="flex items-start justify-between gap-2">
@@ -528,6 +555,24 @@ const MotorizadoDashboard = ({ pedidos = [], onActualizar, onCerrarSesion, motor
                 <X className="w-5 h-5" />
               </button>
             </div>
+
+            {/* Recordatorio de Cobro en Modal de Entrega */}
+            {pedidoParaEntregar.metodo_pago === 'pagado' ? (
+              <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>Pedido <strong>PAGADO PREVIAMENTE</strong>. Valida el DNI titular y toma la foto de entrega.</span>
+              </div>
+            ) : (
+              <div className="p-3 rounded-2xl bg-amber-500/15 border border-amber-500/40 text-amber-300 text-xs space-y-1">
+                <div className="flex items-center gap-1.5 font-bold text-amber-400">
+                  <AlertTriangle className="w-4 h-4 shrink-0" />
+                  <span>RECORDATORIO: PAGO CONTRAENTREGA</span>
+                </div>
+                <p className="text-[11px] text-amber-200/90 leading-relaxed">
+                  Asegúrate de que la administración te haya confirmado el ingreso del dinero a las cuentas antes de cerrar esta entrega.
+                </p>
+              </div>
+            )}
 
             {errorModal && (
               <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-xs flex items-center gap-2">

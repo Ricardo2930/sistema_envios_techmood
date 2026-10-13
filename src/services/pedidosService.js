@@ -59,6 +59,7 @@ const COLUMNAS_PEDIDO_SUPABASE = [
   'codigo_seguridad',
   'link_rastreo',
   'tipo_mercaderia',
+  'metodo_pago',
   'estado',
   'estado_detalle',
   'historial_estados',
@@ -129,6 +130,7 @@ export async function migrarPedidosLocalesASupabase(pedidosLocales = null) {
       if (!obj.courier) obj.courier = obj.tipo_envio === 'lima_metropolitana' ? 'motorizado' : 'shalom';
       if (!obj.estado) obj.estado = 'registrado';
       if (!obj.tipo_mercaderia) obj.tipo_mercaderia = 'PAQUETE XS';
+      if (!obj.metodo_pago) obj.metodo_pago = obj.tipo_envio === 'lima_metropolitana' ? 'contraentrega' : 'pagado';
       if (!obj.historial_estados) obj.historial_estados = [];
       if (typeof obj.notificado_cliente !== 'boolean') obj.notificado_cliente = false;
       if (typeof obj.notificado_admin !== 'boolean') obj.notificado_admin = false;
@@ -187,6 +189,7 @@ export async function crearPedido(datos) {
     codigo_seguridad: null,
     link_rastreo: null,
     tipo_mercaderia: datos.tipo_mercaderia || 'PAQUETE XS',
+    metodo_pago: datos.metodo_pago || (esLima ? 'contraentrega' : 'pagado'),
     estado: (esLima && datos.motorizado_asignado) ? 'asignado' : 'registrado',
     estado_detalle: esLima 
       ? (datos.motorizado_asignado 
@@ -333,12 +336,26 @@ export async function actualizarPedido(id, camposActualizados) {
       }
 
       if (error) {
-        console.error('Error actualizando en Supabase:', error);
-        return null;
+        console.warn('Advertencia actualizando en Supabase (se persiste localmente):', error.message || error);
+        const locales = getLocalPedidos();
+        const index = locales.findIndex((p) => p.id === id);
+        if (index !== -1) {
+          locales[index] = { ...locales[index], ...payload };
+          saveLocalPedidos(locales);
+          return locales[index];
+        }
+        return payload;
       }
     } catch (err) {
-      console.warn('Error actualizando en Supabase:', err);
-      return null;
+      console.warn('Fallo al conectar con Supabase (se persiste localmente):', err);
+      const locales = getLocalPedidos();
+      const index = locales.findIndex((p) => p.id === id);
+      if (index !== -1) {
+        locales[index] = { ...locales[index], ...payload };
+        saveLocalPedidos(locales);
+        return locales[index];
+      }
+      return payload;
     }
   }
 

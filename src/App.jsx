@@ -38,6 +38,7 @@ function App() {
     distritoLima: '',
     direccionEntrega: '',
     referenciaEntrega: '',
+    metodoPago: 'contraentrega',
     fecha: null
   });
 
@@ -238,6 +239,7 @@ function App() {
           distrito_lima: esLima ? formData.distritoLima : null,
           direccion_entrega: esLima ? formData.direccionEntrega : null,
           referencia_entrega: esLima ? formData.referenciaEntrega : null,
+          metodo_pago: esLima ? (formData.metodoPago || 'contraentrega') : 'pagado',
           fecha_prevista: fechaSql,
           tipo_mercaderia: 'PAQUETE XS'
         });
@@ -572,6 +574,39 @@ function App() {
                               placeholder="Ej: Frente al parque, rejas negras, tocar timbre 201"
                               className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-900/90 border border-neutral-700/70 text-white text-xs sm:text-sm placeholder-neutral-500 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 outline-none transition-all"
                             />
+                          </div>
+
+                          {/* Selector de Condición de Pago Lima Express */}
+                          <div>
+                            <label className="text-xs sm:text-sm font-medium text-neutral-300 block mb-1.5">
+                              Condición de Pago *
+                            </label>
+                            <div className="grid grid-cols-2 gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setFormData((prev) => ({ ...prev, metodoPago: 'contraentrega' }))}
+                                className={`py-2.5 px-3 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                                  (formData.metodoPago || 'contraentrega') === 'contraentrega'
+                                    ? 'bg-amber-500/20 border-amber-500/60 text-amber-300 ring-2 ring-amber-500/20 shadow-sm'
+                                    : 'bg-neutral-900/90 border-neutral-700/70 text-neutral-400 hover:text-white'
+                                }`}
+                              >
+                                <span>💵</span>
+                                <span>Contraentrega</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setFormData((prev) => ({ ...prev, metodoPago: 'pagado' }))}
+                                className={`py-2.5 px-3 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                                  formData.metodoPago === 'pagado'
+                                    ? 'bg-emerald-500/20 border-emerald-500/60 text-emerald-300 ring-2 ring-emerald-500/20 shadow-sm'
+                                    : 'bg-neutral-900/90 border-neutral-700/70 text-neutral-400 hover:text-white'
+                                }`}
+                              >
+                                <span>💳</span>
+                                <span>Pagado</span>
+                              </button>
+                            </div>
                           </div>
 
                         </div>

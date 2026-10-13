@@ -83,6 +83,7 @@ ALTER TABLE public.pedidos ADD COLUMN IF NOT EXISTS referencia_entrega TEXT NULL
 ALTER TABLE public.pedidos ADD COLUMN IF NOT EXISTS motorizado_asignado VARCHAR(100) NULL;
 ALTER TABLE public.pedidos ADD COLUMN IF NOT EXISTS foto_entrega TEXT NULL;
 ALTER TABLE public.pedidos ADD COLUMN IF NOT EXISTS fecha_entregado TIMESTAMPTZ NULL;
+ALTER TABLE public.pedidos ADD COLUMN IF NOT EXISTS metodo_pago VARCHAR(30) DEFAULT 'contraentrega';
 ALTER TABLE public.pedidos ADD COLUMN IF NOT EXISTS link_rastreo TEXT NULL;
 ALTER TABLE public.pedidos ADD COLUMN IF NOT EXISTS tipo_mercaderia VARCHAR(30) DEFAULT 'PAQUETE XS';
 

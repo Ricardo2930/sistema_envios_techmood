@@ -226,6 +226,7 @@ const AdminDashboard = ({ onVerRastreo }) => {
       direccion_entrega: p.direccion_entrega || '',
       referencia_entrega: p.referencia_entrega || '',
       motorizado_asignado: p.motorizado_asignado || '',
+      metodo_pago: p.metodo_pago || (p.tipo_envio === 'lima_metropolitana' || p.courier === 'motorizado' || Boolean(p.distrito_lima) ? 'contraentrega' : 'pagado'),
       estado: p.estado || 'registrado',
       estado_detalle: p.estado_detalle || ''
     });
@@ -286,6 +287,7 @@ const AdminDashboard = ({ onVerRastreo }) => {
         direccion_entrega: formEdicion.direccion_entrega.trim() || null,
         referencia_entrega: formEdicion.referencia_entrega.trim() || null,
         motorizado_asignado: formEdicion.motorizado_asignado || null,
+        metodo_pago: formEdicion.metodo_pago || 'contraentrega',
         estado: estadoFinal,
         estado_detalle: detalleFinal,
         historial_estados: nuevoHistorial
@@ -357,12 +359,29 @@ const AdminDashboard = ({ onVerRastreo }) => {
     }
   };
 
+  // Cambiar método de cobro rápido para Lima Express (Pagado vs Contraentrega)
+  const cambiarMetodoPagoRapido = async (p, nuevoMetodoPago) => {
+    if (p.estado === 'entregado') return;
+
+    const res = await actualizarPedido(p.id, { metodo_pago: nuevoMetodoPago });
+    if (res) {
+      setPedidos((prev) =>
+        prev.map((item) => (item.id === p.id ? { ...item, metodo_pago: nuevoMetodoPago } : item))
+      );
+      setToast(
+        nuevoMetodoPago === 'pagado'
+          ? `💳 ${p.codigo_seguimiento}: Marcado como PAGADO (Solo validar DNI)`
+          : `💵 ${p.codigo_seguimiento}: Marcado como CONTRAENTREGA (Esperar confirmación)`
+      );
+    }
+  };
+
   // Helper para renderizar badge de estado unificado y resiliente
   const obtenerBadgeEstado = (p, esLima) => {
     if (p.estado === 'entregado') {
       return {
         texto: 'Entregado',
-        clase: 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+        clase: 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-bold'
       };
     }
     if (p.estado === 'en_transito') {
@@ -380,7 +399,7 @@ const AdminDashboard = ({ onVerRastreo }) => {
     if (p.estado === 'en_origen') {
       return {
         texto: 'En Origen',
-        clase: 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30'
+        clase: 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 font-bold'
       };
     }
     // Para Lima Express: si está asignado o tiene motorizado asignado (y no está en ruta o entregado)
@@ -907,7 +926,7 @@ const AdminDashboard = ({ onVerRastreo }) => {
         <div>
           <div className="flex items-center gap-2">
             <h2 className="text-xl sm:text-2xl font-extrabold text-white">Panel de Gestión Logística</h2>
-            <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold flex items-center gap-1 ${
+            <span className={`px-2.5 py-0.5 rounded-xl text-[11px] font-bold flex items-center gap-1 ${
               rolUsuario === 'admin'
                 ? 'bg-amber-500/15 border border-amber-500/40 text-amber-300'
                 : 'bg-blue-500/15 border border-blue-500/30 text-blue-400'
@@ -1467,6 +1486,28 @@ const AdminDashboard = ({ onVerRastreo }) => {
                           );
                         })()}
                         
+                        {/* Selector de Condición de Pago para Lima Express (Opción A) */}
+                        {esLima && (
+                          <div className="mt-1.5">
+                            <select
+                              value={p.metodo_pago || 'contraentrega'}
+                              onChange={(e) => cambiarMetodoPagoRapido(p, e.target.value)}
+                              disabled={p.estado === 'entregado'}
+                              className={`bg-neutral-950 border rounded-lg px-2 py-0.5 text-[11px] font-bold focus:outline-none transition-colors ${
+                                p.estado === 'entregado'
+                                  ? 'opacity-70 cursor-not-allowed border-neutral-800 text-neutral-400'
+                                  : (p.metodo_pago === 'pagado'
+                                      ? 'border-emerald-500/40 text-emerald-400 focus:border-emerald-500 bg-emerald-500/10'
+                                      : 'border-amber-500/40 text-amber-400 focus:border-amber-500 bg-amber-500/10')
+                              }`}
+                              title={p.estado === 'entregado' ? 'Orden entregada y cerrada' : 'Cambiar condición de cobro (Lima Express)'}
+                            >
+                              <option value="contraentrega">💵 Contraentrega</option>
+                              <option value="pagado">💳 Pagado</option>
+                            </select>
+                          </div>
+                        )}
+
                         {/* Indicador de Foto de Entrega */}
                         {p.foto_entrega && (
                           <div className="mt-1">
@@ -1761,9 +1802,18 @@ const AdminDashboard = ({ onVerRastreo }) => {
                       {badge.texto}
                     </span>
                     {esLima ? (
-                      <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 flex items-center gap-1">
-                        <Bike className="w-2.5 h-2.5" /> Lima Express
-                      </span>
+                      <div className="flex items-center gap-1">
+                        <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 flex items-center gap-1">
+                          <Bike className="w-2.5 h-2.5" /> Lima Express
+                        </span>
+                        <span className={`px-1.5 py-0.5 rounded-md text-[9px] font-bold border ${
+                          p.metodo_pago === 'pagado'
+                            ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                            : 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+                        }`}>
+                          {p.metodo_pago === 'pagado' ? '💳 Pagado' : '💵 Contraentrega'}
+                        </span>
+                      </div>
                     ) : (
                       <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase border ${
                         p.courier === 'shalom'
@@ -1804,22 +1854,43 @@ const AdminDashboard = ({ onVerRastreo }) => {
                 {/* 3. Asignación (Motorizado o Guía Courier) */}
                 <div className="p-2.5 rounded-xl bg-neutral-950/80 border border-neutral-800/80 flex items-center justify-between text-xs">
                   {esLima ? (
-                    <div className="flex items-center justify-between w-full gap-2">
-                      <span className="text-[11px] text-neutral-400 font-semibold">Motorizado:</span>
-                      <select
-                        value={p.motorizado_asignado || 'sin_asignar'}
-                        onChange={(e) => asignarMotorizadoRapido(p, e.target.value)}
-                        disabled={estaEntregado}
-                        className={`bg-neutral-900 border rounded-lg px-2 py-1 text-xs font-bold focus:outline-none ${
-                          estaEntregado
-                            ? 'border-neutral-800 text-neutral-400 cursor-not-allowed opacity-75'
-                            : 'border-neutral-700 text-amber-300 focus:border-amber-500'
-                        }`}
-                      >
-                        <option value="sin_asignar">⚠️ Sin Asignar</option>
-                        <option value="Motorizado 1">🛵 Motorizado 1</option>
-                        <option value="Motorizado 2">🛵 Motorizado 2</option>
-                      </select>
+                    <div className="flex flex-col gap-2 w-full">
+                      <div className="flex items-center justify-between w-full gap-2">
+                        <span className="text-[11px] text-neutral-400 font-semibold">Motorizado:</span>
+                        <select
+                          value={p.motorizado_asignado || 'sin_asignar'}
+                          onChange={(e) => asignarMotorizadoRapido(p, e.target.value)}
+                          disabled={estaEntregado}
+                          className={`bg-neutral-900 border rounded-lg px-2 py-1 text-xs font-bold focus:outline-none ${
+                            estaEntregado
+                              ? 'border-neutral-800 text-neutral-400 cursor-not-allowed opacity-75'
+                              : 'border-neutral-700 text-amber-300 focus:border-amber-500'
+                          }`}
+                        >
+                          <option value="sin_asignar">⚠️ Sin Asignar</option>
+                          <option value="Motorizado 1">🛵 Motorizado 1</option>
+                          <option value="Motorizado 2">🛵 Motorizado 2</option>
+                        </select>
+                      </div>
+
+                      <div className="flex items-center justify-between w-full gap-2 pt-1.5 border-t border-neutral-800/60">
+                        <span className="text-[11px] text-neutral-400 font-semibold">Cobro:</span>
+                        <select
+                          value={p.metodo_pago || 'contraentrega'}
+                          onChange={(e) => cambiarMetodoPagoRapido(p, e.target.value)}
+                          disabled={estaEntregado}
+                          className={`bg-neutral-900 border rounded-lg px-2 py-1 text-xs font-bold focus:outline-none ${
+                            estaEntregado
+                              ? 'border-neutral-800 text-neutral-400 cursor-not-allowed opacity-75'
+                              : (p.metodo_pago === 'pagado'
+                                  ? 'border-emerald-500/40 text-emerald-400 bg-emerald-500/10'
+                                  : 'border-amber-500/40 text-amber-400 bg-amber-500/10')
+                          }`}
+                        >
+                          <option value="contraentrega">💵 Pago Contraentrega</option>
+                          <option value="pagado">💳 Pagado (Solo DNI)</option>
+                        </select>
+                      </div>
                     </div>
                   ) : (
                     <div className="flex items-center justify-between w-full">
@@ -2057,6 +2128,20 @@ const AdminDashboard = ({ onVerRastreo }) => {
                       <option value="">Sin Asignar</option>
                       <option value="Motorizado 1">Motorizado 1</option>
                       <option value="Motorizado 2">Motorizado 2</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-neutral-300 mb-1.5">
+                      Condición de Cobro (Lima Express):
+                    </label>
+                    <select
+                      value={formEdicion.metodo_pago || 'contraentrega'}
+                      onChange={(e) => setFormEdicion({ ...formEdicion, metodo_pago: e.target.value })}
+                      className="w-full px-3.5 py-2.5 bg-neutral-950 border border-neutral-700 rounded-xl text-white text-xs font-semibold focus:outline-none focus:border-amber-500"
+                    >
+                      <option value="contraentrega">💵 Pago Contraentrega (Esperar confirmación)</option>
+                      <option value="pagado">💳 Pagado (Solo validar DNI y entregar)</option>
                     </select>
                   </div>
 
