@@ -931,7 +931,7 @@ const AdminDashboard = ({ onVerRastreo }) => {
                 ? 'bg-amber-500/15 border border-amber-500/40 text-amber-300'
                 : 'bg-blue-500/15 border border-blue-500/30 text-blue-400'
             }`}>
-              {rolUsuario === 'admin' ? '🛡️ Administrador' : '📋 Coordinador de Ventas'}
+              {rolUsuario === 'admin' ? 'Administrador' : 'Coordinador de Ventas'}
             </span>
           </div>
           <p className="text-xs text-neutral-400 mt-1">
@@ -1092,7 +1092,7 @@ const AdminDashboard = ({ onVerRastreo }) => {
           title="Filtrar pedidos pendientes de guía"
         >
           <div className="flex items-center justify-between pb-2">
-            <span className="text-[11px] uppercase tracking-wider text-amber-400 font-bold block truncate">
+            <span className="text-[11px] uppercase tracking-wider text-amber-400 font-bold block">
               Por Emitir Guía
             </span>
             <div className="relative w-8 h-8 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
@@ -1121,7 +1121,7 @@ const AdminDashboard = ({ onVerRastreo }) => {
           title="Filtrar pedidos en tránsito / ruta"
         >
           <div className="flex items-center justify-between pb-2">
-            <span className="text-[10px] xs:text-[11px] uppercase tracking-wider text-blue-400 font-bold block truncate">
+            <span className="text-[10px] xs:text-[11px] uppercase tracking-wider text-blue-400 font-bold block">
               En Ruta / Tránsito
             </span>
             <div className="w-8 h-8 rounded-xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
@@ -1132,7 +1132,7 @@ const AdminDashboard = ({ onVerRastreo }) => {
             {enTransito}
           </p>
           <p className="text-[10px] text-blue-400/70 font-medium mt-1 truncate">
-            Despachos en movimiento
+            Pedidos en movimiento
           </p>
         </div>
 

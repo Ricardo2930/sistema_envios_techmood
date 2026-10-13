@@ -286,7 +286,7 @@ const MotorizadoDashboard = ({ pedidos = [], onActualizar, onCerrarSesion, motor
               onClick={() => setFiltroEstado('pendientes')}
               className={`px-3 py-1.5 rounded-xl transition-all ${
                 filtroEstado === 'pendientes'
-                  ? 'bg-neutral-800 text-white font-bold'
+                  ? 'bg-red-500/20 text-red-300 font-bold border border-red-500/40'
                   : 'text-neutral-400 hover:text-white'
               }`}
             >
@@ -399,9 +399,9 @@ const MotorizadoDashboard = ({ pedidos = [], onActualizar, onCerrarSesion, motor
                       <div className="p-2 sm:p-2.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-between gap-2 text-xs">
                         <div className="flex items-center gap-1.5 font-bold text-emerald-400">
                           <CheckCircle2 className="w-4 h-4 shrink-0" />
-                          <span>PAGADO PREVIAMENTE</span>
+                          <span>PAGADO</span>
                         </div>
-                        <span className="text-[11px] text-emerald-300 font-medium hidden sm:inline">
+                        <span className="text-[11px] text-emerald-300 font-medium">
                           Solo validar DNI y entregar
                         </span>
                       </div>
@@ -409,7 +409,7 @@ const MotorizadoDashboard = ({ pedidos = [], onActualizar, onCerrarSesion, motor
                       <div className="p-2 sm:p-2.5 rounded-2xl bg-amber-500/15 border border-amber-500/40 flex items-center justify-between gap-2 text-xs">
                         <div className="flex items-center gap-1.5 font-extrabold text-amber-300">
                           <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 animate-bounce" />
-                          <span>⚠️ PAGO CONTRAENTREGA</span>
+                          <span>PAGO CONTRAENTREGA</span>
                         </div>
                         <span className="text-[11px] text-amber-200 font-semibold text-right">
                           Esperar confirmación de administración

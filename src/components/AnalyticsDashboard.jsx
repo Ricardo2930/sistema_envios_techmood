@@ -224,7 +224,7 @@ const AnalyticsDashboard = ({ pedidos = [] }) => {
         <div>
           <div className="flex items-center gap-2">
             <h2 className="text-xl sm:text-2xl font-extrabold text-white">Tablero de Inteligencia & KPIs</h2>
-            <span className="px-2.5 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 text-[11px] font-bold">
+            <span className="text-center px-2.5 py-0.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400 text-[11px] font-bold">
               En Tiempo Real
             </span>
           </div>
@@ -348,7 +348,7 @@ const AnalyticsDashboard = ({ pedidos = [] }) => {
                 <p className="text-xs text-neutral-400">Destinos nacionales con mayor volumen de envíos</p>
               </div>
             </div>
-            <span className="text-xs font-mono font-bold text-neutral-400">
+            <span className="text-xs font-mono font-bold text-blue-400">
               {totalProvincia} envíos nac.
             </span>
           </div>
@@ -399,7 +399,7 @@ const AnalyticsDashboard = ({ pedidos = [] }) => {
                 <p className="text-xs text-neutral-400">Demanda express atendida por los motorizados</p>
               </div>
             </div>
-            <span className="text-xs font-mono font-bold text-neutral-400">
+            <span className="text-xs font-mono font-bold text-amber-400">
               {totalLima} envíos Lima
             </span>
           </div>

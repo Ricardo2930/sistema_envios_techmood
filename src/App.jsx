@@ -944,8 +944,8 @@ function App() {
         </main>
       )}
 
-      {/* FOOTER */}
-      <footer className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 text-center text-[11px] sm:text-xs text-neutral-500 flex flex-col sm:flex-row items-center justify-between gap-2 border-t border-amber-600/40 z-10">
+      {/* FOOTER (Visible en PC y Tablet, Oculto en Mobile para acabado de App Nativa PWA) */}
+      <footer className="hidden sm:flex w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 text-center text-xs text-neutral-500 items-center justify-between gap-2 border-t border-amber-600/40 z-10">
         <p>© 2026 tech mood. Sistema Logístico y de Despachos.</p>
         <p className="text-neutral-400">Atención oficial: +51 986601895</p>
       </footer>
