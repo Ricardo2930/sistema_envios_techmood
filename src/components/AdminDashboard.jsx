@@ -10,6 +10,7 @@ import { descargarExcelMasivoShalom } from '../utils/shalomExcelExport';
 import AnalyticsDashboard from './AnalyticsDashboard';
 import MotorizadoDashboard from './MotorizadoDashboard';
 import CustomSelect from './CustomSelect';
+import FiltroFechaPremium, { obtenerFechaPedidoLocal } from './FiltroFechaPremium';
 
 // Hashes criptográficos SHA-256 para validación segura (evita exponer PINs en texto claro en el bundle cliente)
 const ADMIN_HASH_FALLBACK = 'f305e71a41957b09ea466b6997f110536025a953e9426f7ba77e5b95d89b4181';
@@ -47,6 +48,13 @@ const AdminDashboard = ({ onVerRastreo }) => {
   // Estado de datos
   const [pedidos, setPedidos] = useState([]);
   const [cargando, setCargando] = useState(true);
+  const [filtroFecha, setFiltroFecha] = useState({
+    tipo: 'todos',
+    mes: '',
+    desde: '',
+    hasta: '',
+    label: 'Todos los períodos'
+  });
   const [filtroEstado, setFiltroEstado] = useState('todos');
   const [filtroCourier, setFiltroCourier] = useState('todos');
   const [filtroMotorizadoTabla, setFiltroMotorizadoTabla] = useState('todos');
@@ -673,22 +681,42 @@ const AdminDashboard = ({ onVerRastreo }) => {
     }
   };
 
-  // Métricas
-  const total = pedidos.length;
-  const totalLima = pedidos.filter((p) => p.tipo_envio === 'lima_metropolitana' || p.courier === 'motorizado' || p.distrito_lima).length;
-  const totalProvincia = total - totalLima;
-  const sinGuia = pedidos.filter((p) => (p.tipo_envio !== 'lima_metropolitana' && p.courier !== 'motorizado') && !p.numero_guia).length;
-  const enTransito = pedidos.filter((p) => p.estado === 'en_transito').length;
-  const entregados = pedidos.filter((p) => p.estado === 'entregado').length;
+  // Helper para verificar si un pedido pasa el filtro de fecha (por mes o rango)
+  const pasaFiltroFecha = (p, fFecha) => {
+    if (!fFecha || fFecha.tipo === 'todos') return true;
+    const fPedido = obtenerFechaPedidoLocal(p);
+    if (!fPedido) return false;
 
-  // Órdenes Shalom pendientes de emisión de guía
-  const shalomPendientes = pedidos.filter(
+    if (fFecha.tipo === 'mes') {
+      return fPedido.startsWith(fFecha.mes);
+    }
+    if (fFecha.tipo === 'rango' || fFecha.tipo === 'preset') {
+      const desde = fFecha.desde || '2020-01-01';
+      const hasta = fFecha.hasta || '2099-12-31';
+      return fPedido >= desde && fPedido <= hasta;
+    }
+    return true;
+  };
+
+  // Pedidos del período temporal activo (reactivo al filtro por mes o rango)
+  const pedidosPeriodo = pedidos.filter((p) => pasaFiltroFecha(p, filtroFecha));
+
+  // Métricas reactivas al período temporal activo
+  const total = pedidosPeriodo.length;
+  const totalLima = pedidosPeriodo.filter((p) => p.tipo_envio === 'lima_metropolitana' || p.courier === 'motorizado' || p.distrito_lima).length;
+  const totalProvincia = total - totalLima;
+  const sinGuia = pedidosPeriodo.filter((p) => (p.tipo_envio !== 'lima_metropolitana' && p.courier !== 'motorizado') && !p.numero_guia).length;
+  const enTransito = pedidosPeriodo.filter((p) => p.estado === 'en_transito').length;
+  const entregados = pedidosPeriodo.filter((p) => p.estado === 'entregado').length;
+
+  // Órdenes Shalom pendientes de emisión de guía en el período activo
+  const shalomPendientes = pedidosPeriodo.filter(
     (p) => p.courier === 'shalom' && (!p.numero_guia || p.numero_guia.trim() === '')
   );
 
   const handleExportarShalom = async () => {
     if (shalomPendientes.length === 0) {
-      alert('No hay órdenes de Shalom pendientes de emisión de guía para exportar.');
+      alert('No hay órdenes de Shalom pendientes de emisión de guía en el período seleccionado para exportar.');
       return;
     }
     setExportandoExcel(true);
@@ -704,7 +732,7 @@ const AdminDashboard = ({ onVerRastreo }) => {
   };
 
   // Filtrado de lista según pestañas y controles
-  const pedidosFiltrados = pedidos.filter((p) => {
+  const pedidosFiltrados = pedidosPeriodo.filter((p) => {
     const esDeLima = p.tipo_envio === 'lima_metropolitana' || p.courier === 'motorizado' || Boolean(p.distrito_lima);
 
     // Filtro por pestaña activa
@@ -755,6 +783,7 @@ const AdminDashboard = ({ onVerRastreo }) => {
         onActualizar={cargarListaPedidos}
         onCerrarSesion={handleLogout}
         motorizadoActivo={motorizadoLogueado}
+        rolUsuario="motorizado"
       />
     );
   }
@@ -882,6 +911,7 @@ const AdminDashboard = ({ onVerRastreo }) => {
           onActualizar={cargarListaPedidos}
           onCerrarSesion={() => setTabActivo('todos')}
           motorizadoActivo="todos"
+          rolUsuario={rolUsuario}
         />
       </div>
     );
@@ -1207,6 +1237,14 @@ const AdminDashboard = ({ onVerRastreo }) => {
 
         {/* Filtros rápidos: Cuadrícula 2x2 en móvil y flex horizontal en escritorio */}
         <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 text-xs relative z-30 w-full sm:w-auto">
+          {/* Filtro Temporal Premium (Por Mes y Rango de Fechas) */}
+          <FiltroFechaPremium
+            valor={filtroFecha}
+            onChange={setFiltroFecha}
+            pedidos={pedidos}
+            className="col-span-2 sm:col-auto w-full sm:w-auto"
+          />
+
           <CustomSelect
             value={filtroEstado}
             onChange={setFiltroEstado}

@@ -5,13 +5,47 @@ import {
 } from 'lucide-react';
 import { comprimirFotoEntrega, formatearBytes } from '../utils/imageCompressor';
 import { actualizarPedido } from '../services/pedidosService';
+import FiltroFechaPremium, { obtenerFechaPedidoLocal } from './FiltroFechaPremium';
 
-const MotorizadoDashboard = ({ pedidos = [], onActualizar, onCerrarSesion, motorizadoActivo = 'todos' }) => {
+const MotorizadoDashboard = ({ 
+  pedidos = [], 
+  onActualizar, 
+  onCerrarSesion, 
+  motorizadoActivo = 'todos',
+  rolUsuario = 'motorizado'
+}) => {
   const esMotorizadoFijo = motorizadoActivo !== 'todos' && Boolean(motorizadoActivo);
   const [filtroMotorizado, setFiltroMotorizado] = useState(esMotorizadoFijo ? motorizadoActivo : 'todos');
   const [prevMotorizadoActivo, setPrevMotorizadoActivo] = useState(motorizadoActivo);
   const [filtroEstado, setFiltroEstado] = useState('pendientes'); // 'todos' | 'pendientes' | 'entregados'
   const [busqueda, setBusqueda] = useState('');
+
+  // El filtro temporal solo está disponible para Admin, Coordinador o Vendedor (no visible para repartidores en ruta)
+  const puedeVerFiltroFecha = rolUsuario === 'admin' || rolUsuario === 'vendedor' || (!esMotorizadoFijo && motorizadoActivo === 'todos');
+  const [filtroFecha, setFiltroFecha] = useState({
+    tipo: 'todos',
+    mes: '',
+    desde: '',
+    hasta: '',
+    label: 'Todos los períodos'
+  });
+
+  // Helper para verificar filtro de fecha
+  const pasaFiltroFecha = (p, fFecha) => {
+    if (!fFecha || fFecha.tipo === 'todos') return true;
+    const fPedido = obtenerFechaPedidoLocal(p);
+    if (!fPedido) return false;
+
+    if (fFecha.tipo === 'mes') {
+      return fPedido.startsWith(fFecha.mes);
+    }
+    if (fFecha.tipo === 'rango' || fFecha.tipo === 'preset') {
+      const desde = fFecha.desde || '2020-01-01';
+      const hasta = fFecha.hasta || '2099-12-31';
+      return fPedido >= desde && fPedido <= hasta;
+    }
+    return true;
+  };
 
   // Sincronizar filtro cuando cambie la prop motorizadoActivo (patrón oficial de React)
   if (motorizadoActivo && motorizadoActivo !== 'todos' && motorizadoActivo !== prevMotorizadoActivo) {
@@ -43,6 +77,11 @@ const MotorizadoDashboard = ({ pedidos = [], onActualizar, onCerrarSesion, motor
         : pedidosLima.filter((p) => p.motorizado_asignado === filtroMotorizado));
 
   const pedidosFiltrados = pedidosRelevantesConductor.filter((p) => {
+    // Filtro temporal (solo si el usuario tiene permiso de ver filtro)
+    if (puedeVerFiltroFecha && !pasaFiltroFecha(p, filtroFecha)) {
+      return false;
+    }
+
     // Filtro por estado
     if (filtroEstado === 'pendientes') {
       if (p.estado === 'entregado') return false;
@@ -63,9 +102,13 @@ const MotorizadoDashboard = ({ pedidos = [], onActualizar, onCerrarSesion, motor
     return true;
   });
 
-  // Métricas rápidas del motorizado (calculadas exclusivamente sobre los pedidos que le corresponden)
-  const totalPendientes = pedidosRelevantesConductor.filter((p) => p.estado !== 'entregado').length;
-  const totalEntregadosHoy = pedidosRelevantesConductor.filter((p) => p.estado === 'entregado').length;
+  // Métricas rápidas del motorizado (reactivas al corte temporal si está activo)
+  const pedidosParaMetricas = puedeVerFiltroFecha
+    ? pedidosRelevantesConductor.filter((p) => pasaFiltroFecha(p, filtroFecha))
+    : pedidosRelevantesConductor;
+
+  const totalPendientes = pedidosParaMetricas.filter((p) => p.estado !== 'entregado').length;
+  const totalEntregadosHoy = pedidosParaMetricas.filter((p) => p.estado === 'entregado').length;
 
   // Cambiar estado a En Ruta
   const iniciarRuta = async (p) => {
@@ -279,41 +322,52 @@ const MotorizadoDashboard = ({ pedidos = [], onActualizar, onCerrarSesion, motor
             </div>
           )}
 
-          {/* Filtro de Estado */}
-          <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-neutral-900 border border-neutral-800 text-xs font-semibold">
-            <button
-              type="button"
-              onClick={() => setFiltroEstado('pendientes')}
-              className={`px-3 py-1.5 rounded-xl transition-all ${
-                filtroEstado === 'pendientes'
-                  ? 'bg-red-500/20 text-red-300 font-bold border border-red-500/40'
-                  : 'text-neutral-400 hover:text-white'
-              }`}
-            >
-              Pendientes
-            </button>
-            <button
-              type="button"
-              onClick={() => setFiltroEstado('entregados')}
-              className={`px-3 py-1.5 rounded-xl transition-all ${
-                filtroEstado === 'entregados'
-                  ? 'bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/40'
-                  : 'text-neutral-400 hover:text-white'
-              }`}
-            >
-              Entregados
-            </button>
-            <button
-              type="button"
-              onClick={() => setFiltroEstado('todos')}
-              className={`px-3 py-1.5 rounded-xl transition-all ${
-                filtroEstado === 'todos'
-                  ? 'bg-neutral-800 text-white font-bold'
-                  : 'text-neutral-400 hover:text-white'
-              }`}
-            >
-              Ver Todo
-            </button>
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Filtro Temporal Premium: Visible SOLO para Admin y Coordinador/Vendedor */}
+            {puedeVerFiltroFecha && (
+              <FiltroFechaPremium
+                valor={filtroFecha}
+                onChange={setFiltroFecha}
+                pedidos={pedidosLima}
+              />
+            )}
+
+            {/* Filtro de Estado */}
+            <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-neutral-900 border border-neutral-800 text-xs font-semibold">
+              <button
+                type="button"
+                onClick={() => setFiltroEstado('pendientes')}
+                className={`px-3 py-1.5 rounded-xl transition-all ${
+                  filtroEstado === 'pendientes'
+                    ? 'bg-red-500/20 text-red-300 font-bold border border-red-500/40'
+                    : 'text-neutral-400 hover:text-white'
+                }`}
+              >
+                Pendientes
+              </button>
+              <button
+                type="button"
+                onClick={() => setFiltroEstado('entregados')}
+                className={`px-3 py-1.5 rounded-xl transition-all ${
+                  filtroEstado === 'entregados'
+                    ? 'bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/40'
+                    : 'text-neutral-400 hover:text-white'
+                }`}
+              >
+                Entregados
+              </button>
+              <button
+                type="button"
+                onClick={() => setFiltroEstado('todos')}
+                className={`px-3 py-1.5 rounded-xl transition-all ${
+                  filtroEstado === 'todos'
+                    ? 'bg-neutral-800 text-white font-bold'
+                    : 'text-neutral-400 hover:text-white'
+                }`}
+              >
+                Ver Todo
+              </button>
+            </div>
           </div>
         </div>
 
