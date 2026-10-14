@@ -530,27 +530,29 @@ const MotorizadoDashboard = ({
                       </span>
                     </div>
 
-                    {/* Botones de Contacto Rápido */}
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <a
-                        href={`tel:${p.telefono_cliente}`}
-                        className="p-2 sm:px-3 sm:py-1.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white font-semibold text-xs flex items-center gap-1 transition-colors"
-                        title="Llamar al cliente"
-                      >
-                        <Phone className="w-3.5 h-3.5 text-amber-400" />
-                        <span className="hidden sm:inline">Llamar</span>
-                      </a>
-                      <a
-                        href={obtenerUrlWhatsAppCliente(p)}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="p-2 sm:px-3 sm:py-1.5 rounded-xl bg-[#25D366]/20 hover:bg-[#25D366]/30 border border-[#25D366]/40 text-[#25D366] font-bold text-xs flex items-center gap-1 transition-colors"
-                        title="Escribir al WhatsApp"
-                      >
-                        <span className="text-xs">💬</span>
-                        <span className="hidden sm:inline">WhatsApp</span>
-                      </a>
-                    </div>
+                    {/* Botones de Contacto Rápido (Solo disponibles mientras el pedido no esté entregado) */}
+                    {!estaEntregado && (
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <a
+                          href={`tel:${p.telefono_cliente}`}
+                          className="p-2 sm:px-3 sm:py-1.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white font-semibold text-xs flex items-center gap-1 transition-colors active:scale-95"
+                          title="Llamar al cliente"
+                        >
+                          <Phone className="w-3.5 h-3.5 text-amber-400" />
+                          <span className="hidden sm:inline">Llamar</span>
+                        </a>
+                        <a
+                          href={obtenerUrlWhatsAppCliente(p)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="p-2 sm:px-3 sm:py-1.5 rounded-xl bg-[#25D366]/20 hover:bg-[#25D366]/30 border border-[#25D366]/40 text-[#25D366] font-bold text-xs flex items-center gap-1 transition-colors active:scale-95"
+                          title="Escribir al WhatsApp"
+                        >
+                          <span className="text-xs">💬</span>
+                          <span className="hidden sm:inline">WhatsApp</span>
+                        </a>
+                      </div>
+                    )}
                   </div>
 
                   {/* Dirección y Referencia */}

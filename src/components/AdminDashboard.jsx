@@ -3,7 +3,7 @@ import {
   ShieldCheck, Lock, Unlock, Search, RefreshCw, Copy, Check,
   Edit3, Trash2, ExternalLink, Package, Truck, Building2, CheckCircle2,
   AlertTriangle, X, Eye, EyeOff, MessageCircle,
-  FileSpreadsheet, Bike, BarChart3, Navigation, Camera, MapPin, Key, IdCard
+  FileSpreadsheet, Bike, BarChart3, Navigation, Camera, MapPin, Key, IdCard, RotateCcw
 } from 'lucide-react';
 import { obtenerPedidos, actualizarPedido, eliminarPedido, verificarEstadoSupabase } from '../services/pedidosService';
 import { descargarExcelMasivoShalom } from '../utils/shalomExcelExport';
@@ -85,7 +85,7 @@ const AdminDashboard = ({ onVerRastreo }) => {
     }
   });
 
-  const registrarAvisoEnviado = (pedidoId, tipo) => {
+  const registrarAvisoEnviado = async (pedidoId, tipo) => {
     setAvisosEnviados((prev) => {
       const nuevo = {
         ...prev,
@@ -101,6 +101,18 @@ const AdminDashboard = ({ onVerRastreo }) => {
       }
       return nuevo;
     });
+
+    // Si es aviso al cliente, persistir centralizadamente en estado y en Supabase
+    if (tipo === 'cliente') {
+      setPedidos((prev) =>
+        prev.map((item) => (item.id === pedidoId ? { ...item, notificado_cliente: true } : item))
+      );
+      try {
+        await actualizarPedido(pedidoId, { notificado_cliente: true });
+      } catch (e) {
+        console.warn('No se pudo persistir notificado_cliente en base de datos:', e);
+      }
+    }
   };
 
   useEffect(() => {
@@ -1604,22 +1616,34 @@ const AdminDashboard = ({ onVerRastreo }) => {
                         <div className="flex items-center gap-1 justify-center">
                           {p.estado === 'entregado' ? (
                             <>
-                              {/* Botón WhatsApp Aviso Cliente */}
-                              {avisosEnviados[p.id]?.cliente ? (
-                                <span
-                                  className="p-1.5 px-2 rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-400 text-xs font-semibold inline-flex items-center gap-1 cursor-not-allowed opacity-80"
-                                  title="Aviso de entrega ya enviado al cliente"
-                                >
-                                  <Check className="w-3.5 h-3.5 text-emerald-400" />
-                                  <span>✔️ Aviso Enviado</span>
-                                </span>
+                              {/* Botón WhatsApp Aviso Cliente con Reenvío Profesional */}
+                              {(p.notificado_cliente || avisosEnviados[p.id]?.cliente) ? (
+                                <div className="inline-flex items-center gap-1">
+                                  <span
+                                    className="p-1.5 px-2 rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-400 text-xs font-semibold inline-flex items-center gap-1 opacity-90"
+                                    title="Aviso de entrega ya enviado al cliente"
+                                  >
+                                    <Check className="w-3.5 h-3.5 text-emerald-400" />
+                                    <span>Aviso Enviado</span>
+                                  </span>
+                                  <a
+                                    href={generarLinkWhatsAppEntregaCliente(p)}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="p-1.5 px-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-neutral-300 hover:text-white text-xs font-semibold transition-all inline-flex items-center gap-1 active:scale-95 cursor-pointer shadow-sm"
+                                    title="Reenviar mensaje de confirmación al cliente por WhatsApp"
+                                  >
+                                    <RotateCcw className="w-3 h-3 text-amber-400" />
+                                    <span className="hidden xl:inline">Reenviar</span>
+                                  </a>
+                                </div>
                               ) : (
                                 <a
                                   href={generarLinkWhatsAppEntregaCliente(p)}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   onClick={() => registrarAvisoEnviado(p.id, 'cliente')}
-                                  className="p-1.5 px-2 rounded-lg bg-[#25D366]/20 border border-[#25D366]/40 hover:bg-[#25D366]/30 text-[#25D366] text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1 shadow-sm"
+                                  className="p-1.5 px-2 rounded-lg bg-[#25D366]/20 border border-[#25D366]/40 hover:bg-[#25D366]/30 text-[#25D366] text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1 shadow-sm active:scale-95"
                                   title="Enviar confirmación de entrega al cliente por WhatsApp"
                                 >
                                   <MessageCircle className="w-3.5 h-3.5 fill-[#25D366]" />
@@ -2008,18 +2032,30 @@ const AdminDashboard = ({ onVerRastreo }) => {
                   <div className="flex flex-wrap items-center gap-1.5">
                     {/* Botón WhatsApp Cliente */}
                     {estaEntregado ? (
-                      avisosEnviados[p.id]?.cliente ? (
-                        <span className="px-2 py-1 rounded-xl bg-neutral-900 border border-neutral-800 text-neutral-400 text-[11px] font-semibold inline-flex items-center gap-1">
-                          <Check className="w-3 h-3 text-emerald-400" />
-                          <span>Aviso Enviado</span>
-                        </span>
+                      (p.notificado_cliente || avisosEnviados[p.id]?.cliente) ? (
+                        <div className="inline-flex items-center gap-1">
+                          <span className="px-2 py-1 rounded-xl bg-neutral-900 border border-neutral-800 text-neutral-400 text-[11px] font-semibold inline-flex items-center gap-1">
+                            <Check className="w-3 h-3 text-emerald-400" />
+                            <span>Aviso Enviado</span>
+                          </span>
+                          <a
+                            href={generarLinkWhatsAppEntregaCliente(p)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-2 py-1 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-neutral-300 hover:text-white text-[11px] font-medium inline-flex items-center gap-1 active:scale-95"
+                            title="Reenviar mensaje de confirmación al cliente por WhatsApp"
+                          >
+                            <RotateCcw className="w-2.5 h-2.5 text-amber-400" />
+                            <span>Reenviar</span>
+                          </a>
+                        </div>
                       ) : (
                         <a
                           href={generarLinkWhatsAppEntregaCliente(p)}
                           target="_blank"
                           rel="noopener noreferrer"
                           onClick={() => registrarAvisoEnviado(p.id, 'cliente')}
-                          className="px-2 py-1 rounded-xl bg-[#25D366]/20 border border-[#25D366]/40 text-[#25D366] text-[11px] font-bold inline-flex items-center gap-1"
+                          className="px-2 py-1 rounded-xl bg-[#25D366]/20 border border-[#25D366]/40 text-[#25D366] text-[11px] font-bold inline-flex items-center gap-1 active:scale-95"
                         >
                           <MessageCircle className="w-3 h-3 fill-[#25D366]" />
                           <span>Aviso Cliente</span>
