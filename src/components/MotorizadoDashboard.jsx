@@ -636,8 +636,9 @@ const MotorizadoDashboard = ({
 
       {/* ================= MODAL: SUBIR DOBLE FOTO DE ENTREGA COMPRIMIDA (PAQUETE + DNI) ================= */}
       {pedidoParaEntregar && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-in fade-in overflow-y-auto">
-          <div className="w-full max-w-lg bg-neutral-900 border border-neutral-700 rounded-3xl p-5 sm:p-6 shadow-2xl space-y-4 my-auto">
+        <div className="fixed inset-0 z-[60] bg-black/85 backdrop-blur-md overflow-y-auto overscroll-contain p-3 sm:p-4 animate-in fade-in">
+          <div className="min-h-full flex items-center justify-center py-6 pb-10 sm:py-8 sm:pb-8">
+            <div className="w-full max-w-lg bg-neutral-900 border border-neutral-700 rounded-3xl p-5 sm:p-6 shadow-2xl space-y-4">
             
             <div className="flex items-center justify-between pb-3 border-b border-neutral-800">
               <div className="flex items-center gap-2">
@@ -663,7 +664,7 @@ const MotorizadoDashboard = ({
             {pedidoParaEntregar.metodo_pago === 'pagado' ? (
               <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>Pedido <strong>PAGADO PREVIAMENTE</strong>. Valida el DNI físico del receptor y toma ambas fotos.</span>
+                <span>Pedido <strong>PAGADO</strong>. Valida el DNI físico del receptor y toma ambas fotos.</span>
               </div>
             ) : (
               <div className="p-3 rounded-2xl bg-amber-500/15 border border-amber-500/40 text-amber-300 text-xs space-y-1">
@@ -827,12 +828,12 @@ const MotorizadoDashboard = ({
               </span>
             </div>
 
-            {/* Botones de acción */}
-            <div className="pt-2 flex items-center gap-2">
+            {/* Botones de acción con padding y altura táctil optimizada para celular */}
+            <div className="pt-3 flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => setPedidoParaEntregar(null)}
-                className="w-1/3 py-2.5 rounded-xl bg-neutral-800 text-neutral-300 hover:text-white text-xs font-semibold cursor-pointer"
+                className="w-1/3 py-3 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white text-xs font-semibold cursor-pointer transition-colors active:scale-95"
               >
                 Cancelar
               </button>
@@ -840,65 +841,75 @@ const MotorizadoDashboard = ({
                 type="button"
                 onClick={confirmarEntregaConFoto}
                 disabled={guardandoEntrega || !fotoPaquete || !fotoDni}
-                className="w-2/3 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-black font-black text-xs transition-all shadow-lg shadow-emerald-500/20 disabled:opacity-50 cursor-pointer"
+                className="w-2/3 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-black font-black text-xs transition-all shadow-lg shadow-emerald-500/20 disabled:opacity-50 cursor-pointer active:scale-95 flex items-center justify-center gap-2"
               >
-                {guardandoEntrega ? 'Finalizando y guardando...' : 'Confirmar y Cerrar Pedido'}
+                {guardandoEntrega ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Finalizando y guardando...</span>
+                  </>
+                ) : (
+                  <span>Confirmar y Cerrar Pedido</span>
+                )}
               </button>
             </div>
 
+            </div>
           </div>
         </div>
       )}
 
       {/* ================= MODAL: ÉXITO POST-ENTREGA CON ENVÍO DE REPORTE A WHATSAPP ADMIN ================= */}
       {reporteEntregaExito && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in">
-          <div className="w-full max-w-md bg-neutral-900 border border-emerald-500/40 rounded-3xl p-5 sm:p-6 shadow-2xl space-y-4 text-center">
-            <div className="w-14 h-14 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/20">
-              <CheckCircle2 className="w-8 h-8" />
-            </div>
-            
-            <div>
-              <h3 className="text-base sm:text-lg font-black text-white">¡Entrega Cerrada con Éxito!</h3>
-              <p className="text-xs text-neutral-300 mt-1">
-                Las evidencias de paquete y DNI fueron guardadas correctamente en tech mood.
-              </p>
-            </div>
-
-            {/* Resumen rápido del pedido entregado */}
-            <div className="p-3.5 rounded-2xl bg-neutral-950 border border-neutral-800 text-left text-xs space-y-1.5">
-              <div className="flex justify-between items-center pb-1.5 border-b border-neutral-800">
-                <span className="text-white font-mono font-bold">{reporteEntregaExito.codigo_seguimiento}</span>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
-                  ENTREGADO
-                </span>
+        <div className="fixed inset-0 z-[60] bg-black/85 backdrop-blur-md overflow-y-auto overscroll-contain p-4 animate-in fade-in">
+          <div className="min-h-full flex items-center justify-center py-6 pb-10 sm:py-8 sm:pb-8">
+            <div className="w-full max-w-md bg-neutral-900 border border-emerald-500/40 rounded-3xl p-5 sm:p-6 shadow-2xl space-y-4 text-center">
+              <div className="w-14 h-14 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/20">
+                <CheckCircle2 className="w-8 h-8" />
               </div>
-              <div className="text-white font-bold">{reporteEntregaExito.nombre_cliente}</div>
-              <div className="text-neutral-400 text-[11px]">📍 {reporteEntregaExito.distrito_lima} • {reporteEntregaExito.direccion_entrega}</div>
-              <div className="text-[11px] font-semibold text-amber-300">
-                {reporteEntregaExito.metodo_pago === 'pagado' ? '💳 Pago Previo (Validado con DNI)' : '💵 Pago Contraentrega Recibido'}
+              
+              <div>
+                <h3 className="text-base sm:text-lg font-black text-white">¡Entrega Cerrada con Éxito!</h3>
+                <p className="text-xs text-neutral-300 mt-1">
+                  Las evidencias de paquete y DNI fueron guardadas correctamente en tech mood.
+                </p>
               </div>
-            </div>
 
-            {/* Botón WhatsApp directo al Admin */}
-            <div className="space-y-2 pt-1">
-              <a
-                href={generarUrlWhatsAppReporteAdmin(reporteEntregaExito)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full py-3 px-4 rounded-2xl bg-[#25D366] hover:bg-[#20ba5a] text-black font-black text-xs flex items-center justify-center gap-2 transition-all shadow-xl shadow-[#25D366]/25 cursor-pointer"
-              >
-                <MessageCircle className="w-4 h-4 fill-black" />
-                <span>Enviar Reporte a Admin (WhatsApp)</span>
-              </a>
+              {/* Resumen rápido del pedido entregado */}
+              <div className="p-3.5 rounded-2xl bg-neutral-950 border border-neutral-800 text-left text-xs space-y-1.5">
+                <div className="flex justify-between items-center pb-1.5 border-b border-neutral-800">
+                  <span className="text-white font-mono font-bold">{reporteEntregaExito.codigo_seguimiento}</span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                    ENTREGADO
+                  </span>
+                </div>
+                <div className="text-white font-bold">{reporteEntregaExito.nombre_cliente}</div>
+                <div className="text-neutral-400 text-[11px]">📍 {reporteEntregaExito.distrito_lima} • {reporteEntregaExito.direccion_entrega}</div>
+                <div className="text-[11px] font-semibold text-amber-300">
+                  {reporteEntregaExito.metodo_pago === 'pagado' ? '💳 Pago Previo (Validado con DNI)' : '💵 Pago Contraentrega Recibido'}
+                </div>
+              </div>
 
-              <button
-                type="button"
-                onClick={() => setReporteEntregaExito(null)}
-                className="w-full py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white text-xs font-semibold transition-colors cursor-pointer"
-              >
-                Cerrar y Continuar Rutas
-              </button>
+              {/* Botón WhatsApp directo al Admin */}
+              <div className="space-y-2.5 pt-2">
+                <a
+                  href={generarUrlWhatsAppReporteAdmin(reporteEntregaExito)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-3.5 px-4 rounded-2xl bg-[#25D366] hover:bg-[#20ba5a] text-black font-black text-xs flex items-center justify-center gap-2 transition-all shadow-xl shadow-[#25D366]/25 cursor-pointer active:scale-95"
+                >
+                  <MessageCircle className="w-4 h-4 fill-black" />
+                  <span>Enviar Reporte a Admin (WhatsApp)</span>
+                </a>
+
+                <button
+                  type="button"
+                  onClick={() => setReporteEntregaExito(null)}
+                  className="w-full py-3 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white text-xs font-semibold transition-colors cursor-pointer active:scale-95"
+                >
+                  Cerrar y Continuar Rutas
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -908,64 +919,66 @@ const MotorizadoDashboard = ({
       {evidenciasParaVer && (
         <div 
           onClick={() => setEvidenciasParaVer(null)}
-          className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in"
+          className="fixed inset-0 z-[60] bg-black/90 backdrop-blur-md overflow-y-auto overscroll-contain p-3 sm:p-4 animate-in fade-in"
         >
-          <div 
-            onClick={(e) => e.stopPropagation()}
-            className="relative max-w-lg w-full bg-neutral-900 border border-neutral-800 rounded-3xl p-4 overflow-hidden space-y-3"
-          >
-            <div className="flex items-center justify-between pb-2.5 border-b border-neutral-800">
-              <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                <ShieldCheck className="w-4 h-4 text-emerald-400" /> Evidencias de Entrega
-              </span>
-              <button 
-                onClick={() => setEvidenciasParaVer(null)}
-                className="p-1 rounded-lg text-neutral-400 hover:text-white"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Pestañas si existen ambas fotos */}
-            {evidenciasParaVer.foto_entrega && evidenciasParaVer.foto_dni && (
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setEvidenciasParaVer(prev => ({ ...prev, tab: 'paquete' }))}
-                  className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                    evidenciasParaVer.tab === 'paquete'
-                      ? 'bg-amber-500/20 border border-amber-500/50 text-amber-300 shadow-sm'
-                      : 'bg-neutral-800/80 hover:bg-neutral-800 text-neutral-400'
-                  }`}
+          <div className="min-h-full flex items-center justify-center py-6 pb-20 sm:py-8 sm:pb-8">
+            <div 
+              onClick={(e) => e.stopPropagation()}
+              className="relative max-w-lg w-full bg-neutral-900 border border-neutral-800 rounded-3xl p-4 overflow-hidden space-y-3"
+            >
+              <div className="flex items-center justify-between pb-2.5 border-b border-neutral-800">
+                <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <ShieldCheck className="w-4 h-4 text-emerald-400" /> Evidencias de Entrega
+                </span>
+                <button 
+                  onClick={() => setEvidenciasParaVer(null)}
+                  className="p-1 rounded-lg text-neutral-400 hover:text-white"
                 >
-                  <Camera className="w-3.5 h-3.5" />
-                  <span>Foto Paquete</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setEvidenciasParaVer(prev => ({ ...prev, tab: 'dni' }))}
-                  className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                    evidenciasParaVer.tab === 'dni'
-                      ? 'bg-teal-500/20 border border-teal-500/50 text-teal-300 shadow-sm'
-                      : 'bg-neutral-800/80 hover:bg-neutral-800 text-neutral-400'
-                  }`}
-                >
-                  <IdCard className="w-3.5 h-3.5" />
-                  <span>Foto DNI</span>
+                  <X className="w-5 h-5" />
                 </button>
               </div>
-            )}
 
-            <div className="rounded-2xl overflow-hidden border border-neutral-800 bg-black flex items-center justify-center">
-              <img
-                src={
-                  evidenciasParaVer.tab === 'dni'
-                    ? (evidenciasParaVer.foto_dni || evidenciasParaVer.foto_entrega)
-                    : (evidenciasParaVer.foto_entrega || evidenciasParaVer.foto_dni)
-                }
-                alt="Evidencia fotográfica"
-                className="w-full max-h-[65vh] object-contain"
-              />
+              {/* Pestañas si existen ambas fotos */}
+              {evidenciasParaVer.foto_entrega && evidenciasParaVer.foto_dni && (
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEvidenciasParaVer(prev => ({ ...prev, tab: 'paquete' }))}
+                    className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                      evidenciasParaVer.tab === 'paquete'
+                        ? 'bg-amber-500/20 border border-amber-500/50 text-amber-300 shadow-sm'
+                        : 'bg-neutral-800/80 hover:bg-neutral-800 text-neutral-400'
+                    }`}
+                  >
+                    <Camera className="w-3.5 h-3.5" />
+                    <span>Foto Paquete</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEvidenciasParaVer(prev => ({ ...prev, tab: 'dni' }))}
+                    className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                      evidenciasParaVer.tab === 'dni'
+                        ? 'bg-teal-500/20 border border-teal-500/50 text-teal-300 shadow-sm'
+                        : 'bg-neutral-800/80 hover:bg-neutral-800 text-neutral-400'
+                    }`}
+                  >
+                    <IdCard className="w-3.5 h-3.5" />
+                    <span>Foto DNI</span>
+                  </button>
+                </div>
+              )}
+
+              <div className="rounded-2xl overflow-hidden border border-neutral-800 bg-black flex items-center justify-center">
+                <img
+                  src={
+                    evidenciasParaVer.tab === 'dni'
+                      ? (evidenciasParaVer.foto_dni || evidenciasParaVer.foto_entrega)
+                      : (evidenciasParaVer.foto_entrega || evidenciasParaVer.foto_dni)
+                  }
+                  alt="Evidencia fotográfica"
+                  className="w-full max-h-[65vh] object-contain"
+                />
+              </div>
             </div>
           </div>
         </div>

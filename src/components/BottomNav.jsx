@@ -22,7 +22,7 @@ const BottomNav = ({ vistaActiva = 'formulario', onCambiarVista }) => {
   return (
     <nav 
       aria-label="Navegación móvil inferior"
-      className="fixed bottom-0 left-0 right-0 z-50 sm:hidden bg-neutral-950/95 backdrop-blur-2xl border-t border-neutral-800/80 shadow-[0_-8px_32px_rgba(0,0,0,0.6)] px-3 py-1.5 select-none"
+      className="fixed bottom-0 left-0 right-0 z-40 sm:hidden bg-neutral-950/95 backdrop-blur-2xl border-t border-neutral-800/80 shadow-[0_-8px_32px_rgba(0,0,0,0.6)] px-3 py-1.5 select-none"
       style={{ paddingBottom: 'calc(0.45rem + env(safe-area-inset-bottom, 0px))' }}
     >
       <div className="max-w-md mx-auto grid grid-cols-3 gap-2 items-center">
