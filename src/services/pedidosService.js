@@ -55,6 +55,7 @@ const COLUMNAS_PEDIDO_SUPABASE = [
   'referencia_entrega',
   'motorizado_asignado',
   'foto_entrega',
+  'foto_dni',
   'numero_guia',
   'codigo_seguridad',
   'codigo_recojo',
@@ -184,6 +185,7 @@ export async function crearPedido(datos) {
     referencia_entrega: datos.referencia_entrega || null,
     motorizado_asignado: datos.motorizado_asignado || null,
     foto_entrega: null,
+    foto_dni: null,
 
     fecha_prevista: datos.fecha_prevista,
     numero_guia: null,

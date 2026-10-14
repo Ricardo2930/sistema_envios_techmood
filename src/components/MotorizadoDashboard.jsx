@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { 
   Bike, Phone, MapPin, Navigation, Camera, CheckCircle2, AlertTriangle, 
-  Clock, Search, RefreshCw, UploadCloud, X, ShieldCheck, Eye
+  Clock, Search, RefreshCw, UploadCloud, X, ShieldCheck, Eye, IdCard, MessageCircle, Check
 } from 'lucide-react';
 import { comprimirFotoEntrega, formatearBytes } from '../utils/imageCompressor';
 import { actualizarPedido } from '../services/pedidosService';
@@ -53,16 +53,21 @@ const MotorizadoDashboard = ({
     setFiltroMotorizado(motorizadoActivo);
   }
   
-  // Modal de entrega con foto
+  // Modal de entrega con doble foto (Paquete + DNI)
   const [pedidoParaEntregar, setPedidoParaEntregar] = useState(null);
-  const [fotoComprimida, setFotoComprimida] = useState(null);
-  const [procesandoFoto, setProcesandoFoto] = useState(false);
+  const [fotoPaquete, setFotoPaquete] = useState(null);
+  const [fotoDni, setFotoDni] = useState(null);
+  const [procesandoFotoTipo, setProcesandoFotoTipo] = useState(null); // 'paquete' | 'dni' | null
   const [guardandoEntrega, setGuardandoEntrega] = useState(false);
   const [errorModal, setErrorModal] = useState('');
-  const fileInputRef = useRef(null);
+  const fileInputPaqueteRef = useRef(null);
+  const fileInputDniRef = useRef(null);
 
-  // Modal para ver foto ya entregada
-  const [fotoParaVer, setFotoParaVer] = useState(null);
+  // Modal de éxito post-entrega con reporte directo a WhatsApp Admin
+  const [reporteEntregaExito, setReporteEntregaExito] = useState(null);
+
+  // Modal para ver evidencias registradas (Paquete y DNI con selector de pestaña)
+  const [evidenciasParaVer, setEvidenciasParaVer] = useState(null);
 
   // Filtrar solo pedidos de Lima Metropolitana
   const pedidosLima = pedidos.filter((p) => 
@@ -128,42 +133,52 @@ const MotorizadoDashboard = ({
     if (onActualizar) onActualizar();
   };
 
-  // Abrir modal de entrega fotográfica
+  // Abrir modal de entrega fotográfica (Doble evidencia: Paquete + DNI)
   const abrirModalEntrega = (p) => {
     setPedidoParaEntregar(p);
-    setFotoComprimida(null);
+    setFotoPaquete(null);
+    setFotoDni(null);
     setErrorModal('');
   };
 
-  // Manejar captura / selección de foto
-  const handleSeleccionarFoto = async (e) => {
+  // Manejar captura / selección de foto por tipo ('paquete' | 'dni')
+  const handleSeleccionarFoto = async (e, tipo) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setErrorModal('');
-    setProcesandoFoto(true);
+    setProcesandoFotoTipo(tipo);
 
     try {
-      // Compresión inteligente instantánea en el navegador (reduce de ~8MB a ~80KB)
+      // Compresión inteligente instantánea en el navegador (reduce de ~8MB a ~70KB manteniendo nitidez)
       const resultado = await comprimirFotoEntrega(file, {
         maxWidth: 1200,
         maxHeight: 1200,
         quality: 0.68
       });
-      setFotoComprimida(resultado);
+      if (tipo === 'paquete') {
+        setFotoPaquete(resultado);
+      } else if (tipo === 'dni') {
+        setFotoDni(resultado);
+      }
     } catch (err) {
       console.error(err);
       setErrorModal('No se pudo procesar la foto: ' + err.message);
     } finally {
-      setProcesandoFoto(false);
+      setProcesandoFotoTipo(null);
+      e.target.value = '';
     }
   };
 
-  // Confirmar entrega con foto guardada
+  // Confirmar entrega con ambas fotos guardadas (Paquete y DNI obligatorios)
   const confirmarEntregaConFoto = async () => {
     if (!pedidoParaEntregar) return;
-    if (!fotoComprimida?.base64) {
-      setErrorModal('Por favor toma o sube una fotografía del paquete entregado como evidencia.');
+    if (!fotoPaquete?.base64) {
+      setErrorModal('Por favor toma o sube la fotografía del paquete entregado en el domicilio.');
+      return;
+    }
+    if (!fotoDni?.base64) {
+      setErrorModal('Por favor toma o sube la fotografía del DNI físico del cliente/receptor.');
       return;
     }
 
@@ -174,18 +189,28 @@ const MotorizadoDashboard = ({
       nuevoHistorial.push({
         estado: 'entregado',
         fecha: ahora,
-        detalle: `Entregado satisfactoriamente por ${pedidoParaEntregar.motorizado_asignado || 'Motorizado tech mood'}. Evidencia registrada.`
+        detalle: `Entregado satisfactoriamente por ${pedidoParaEntregar.motorizado_asignado || 'Motorizado tech mood'}. Doble evidencia (Paquete + DNI) registrada.`
       });
 
-      await actualizarPedido(pedidoParaEntregar.id, {
+      const actualizacion = {
         estado: 'entregado',
-        estado_detalle: `Entregado con éxito a domicilio en ${pedidoParaEntregar.distrito_lima}.`,
-        foto_entrega: fotoComprimida.base64,
+        estado_detalle: `Entregado con éxito a domicilio en ${pedidoParaEntregar.distrito_lima}. Evidencias validadas.`,
+        foto_entrega: fotoPaquete.base64,
+        foto_dni: fotoDni.base64,
         fecha_entregado: ahora,
         historial_estados: nuevoHistorial
-      });
+      };
+
+      await actualizarPedido(pedidoParaEntregar.id, actualizacion);
+
+      const pedidoCompletado = {
+        ...pedidoParaEntregar,
+        ...actualizacion
+      };
 
       setPedidoParaEntregar(null);
+      // Abrir modal de éxito con acceso directo para reportar al Admin por WhatsApp
+      setReporteEntregaExito(pedidoCompletado);
       if (onActualizar) onActualizar();
     } catch (err) {
       console.error(err);
@@ -193,6 +218,26 @@ const MotorizadoDashboard = ({
     } finally {
       setGuardandoEntrega(false);
     }
+  };
+
+  // Generar URL para enviar reporte de entrega finalizada directo al WhatsApp del Admin (+51 986601895)
+  const generarUrlWhatsAppReporteAdmin = (p) => {
+    const esPagado = p.metodo_pago === 'pagado';
+    const lineas = [
+      `✅ *[REPORTE DE ENTREGA EN DOMICILIO - LIMA EXPRESS]*`,
+      `----------------------------------------`,
+      `• *Código TM:* ${p.codigo_seguimiento}`,
+      `• *Cliente:* ${p.nombre_cliente}`,
+      `• *DNI Receptor:* ${p.dni_cliente || 'Validado en foto física'}`,
+      `• *Distrito:* ${p.distrito_lima || 'Lima'}`,
+      `• *Dirección:* ${p.direccion_entrega || ''}`,
+      `• *Condición de Cobro:* ${esPagado ? '💳 PAGADO (Validado con DNI)' : '💵 CONTRAENTREGA COBRADO'}`,
+      `• *Repartidor:* ${p.motorizado_asignado || (esMotorizadoFijo ? motorizadoActivo : 'Motorizado tech mood')}`,
+      `• *Estado:* ENTREGADO CON ÉXITO`,
+      `----------------------------------------`,
+      `📸 _Las 2 evidencias (Foto del Paquete y Foto del DNI del receptor) ya fueron registradas en el sistema tech mood._`
+    ];
+    return `https://api.whatsapp.com/send?phone=51986601895&text=${encodeURIComponent(lineas.join('\n'))}`;
   };
 
   // Generar URL de Google Maps para navegación directa
@@ -567,14 +612,18 @@ const MotorizadoDashboard = ({
                       </button>
                     )}
 
-                    {estaEntregado && p.foto_entrega && (
+                    {estaEntregado && (p.foto_entrega || p.foto_dni) && (
                       <button
                         type="button"
-                        onClick={() => setFotoParaVer(p.foto_entrega)}
+                        onClick={() => setEvidenciasParaVer({
+                          foto_entrega: p.foto_entrega,
+                          foto_dni: p.foto_dni,
+                          tab: p.foto_entrega ? 'paquete' : 'dni'
+                        })}
                         className="px-3 py-1.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-emerald-400 text-xs font-bold flex items-center gap-1.5"
                       >
                         <Eye className="w-3.5 h-3.5" />
-                        <span>Ver Evidencia Fotográfica</span>
+                        <span>Ver Evidencias</span>
                       </button>
                     )}
                   </div>
@@ -585,10 +634,10 @@ const MotorizadoDashboard = ({
         )}
       </div>
 
-      {/* ================= MODAL: SUBIR FOTO DE ENTREGA COMPRIMIDA ================= */}
+      {/* ================= MODAL: SUBIR DOBLE FOTO DE ENTREGA COMPRIMIDA (PAQUETE + DNI) ================= */}
       {pedidoParaEntregar && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in">
-          <div className="w-full max-w-md bg-neutral-900 border border-neutral-700 rounded-3xl p-5 sm:p-6 shadow-2xl space-y-4">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-in fade-in overflow-y-auto">
+          <div className="w-full max-w-lg bg-neutral-900 border border-neutral-700 rounded-3xl p-5 sm:p-6 shadow-2xl space-y-4 my-auto">
             
             <div className="flex items-center justify-between pb-3 border-b border-neutral-800">
               <div className="flex items-center gap-2">
@@ -596,7 +645,7 @@ const MotorizadoDashboard = ({
                   <Camera className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-white">Evidencia de Entrega</h3>
+                  <h3 className="text-base font-bold text-white">Registro de Evidencias de Entrega</h3>
                   <p className="text-[11px] text-neutral-400 font-mono">
                     {pedidoParaEntregar.codigo_seguimiento} • {pedidoParaEntregar.nombre_cliente}
                   </p>
@@ -610,11 +659,11 @@ const MotorizadoDashboard = ({
               </button>
             </div>
 
-            {/* Recordatorio de Cobro en Modal de Entrega */}
+            {/* Recordatorio de Cobro / DNI en Modal de Entrega */}
             {pedidoParaEntregar.metodo_pago === 'pagado' ? (
               <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>Pedido <strong>PAGADO PREVIAMENTE</strong>. Valida el DNI titular y toma la foto de entrega.</span>
+                <span>Pedido <strong>PAGADO PREVIAMENTE</strong>. Valida el DNI físico del receptor y toma ambas fotos.</span>
               </div>
             ) : (
               <div className="p-3 rounded-2xl bg-amber-500/15 border border-amber-500/40 text-amber-300 text-xs space-y-1">
@@ -635,95 +684,165 @@ const MotorizadoDashboard = ({
               </div>
             )}
 
-            {/* Input para seleccionar o tomar foto */}
+            {/* Inputs ocultos de fotos */}
             <input
-              ref={fileInputRef}
+              ref={fileInputPaqueteRef}
               type="file"
               accept="image/*"
               capture="environment"
-              onChange={handleSeleccionarFoto}
+              onChange={(e) => handleSeleccionarFoto(e, 'paquete')}
+              className="hidden"
+            />
+            <input
+              ref={fileInputDniRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={(e) => handleSeleccionarFoto(e, 'dni')}
               className="hidden"
             />
 
-            {!fotoComprimida ? (
-              <div
-                onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-neutral-700 hover:border-amber-500 rounded-2xl p-8 text-center cursor-pointer transition-all bg-neutral-950/40 hover:bg-neutral-950/80 group"
-              >
-                <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center mx-auto mb-3 group-hover:scale-105 transition-transform">
-                  <UploadCloud className="w-7 h-7" />
-                </div>
-                <p className="text-white font-bold text-sm">Tomar Foto o Seleccionar de Galería</p>
-                <p className="text-xs text-neutral-400 mt-1 max-w-xs mx-auto">
-                  Toma foto del paquete entregado en puerta o fachada como evidencia de entrega.
-                </p>
-                <span className="inline-block mt-3 px-3 py-1 rounded-full bg-neutral-800 text-neutral-300 text-[11px] font-semibold">
-                  Compresión automática ultrarrápida (95% ahorro)
-                </span>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {/* Previsualización de la foto comprimida */}
-                <div className="relative rounded-2xl overflow-hidden border border-neutral-700 bg-black aspect-video flex items-center justify-center">
-                  <img
-                    src={fotoComprimida.base64}
-                    alt="Evidencia"
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute top-2 right-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setFotoComprimida(null);
-                      }}
-                      className="p-1.5 rounded-full bg-black/70 text-white hover:bg-black"
-                      title="Tomar otra foto"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
+            {/* GRID CON LAS DOS CASILLAS DE EVIDENCIA: PAQUETE Y DNI */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              
+              {/* CASILLA 1: FOTO DEL PAQUETE */}
+              <div className="p-3.5 rounded-2xl bg-neutral-950/70 border border-neutral-800 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <Camera className="w-4 h-4 text-amber-400" /> 1. Foto del Paquete
+                  </span>
+                  {fotoPaquete ? (
+                    <span className="text-[10px] font-bold text-emerald-400 flex items-center gap-1">
+                      <Check className="w-3 h-3" /> Listo
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-bold text-amber-400">Requerido</span>
+                  )}
                 </div>
 
-                {/* Badge de Compresión Inteligente */}
-                <div className="p-3 rounded-xl bg-neutral-950 border border-neutral-800 text-xs space-y-1">
-                  <div className="flex items-center justify-between text-neutral-300">
-                    <span>Tamaño original:</span>
-                    <span className="font-mono">{formatearBytes(fotoComprimida.originalSize)}</span>
+                {!fotoPaquete ? (
+                  <div
+                    onClick={() => fileInputPaqueteRef.current?.click()}
+                    className="border-2 border-dashed border-neutral-700 hover:border-amber-500 rounded-xl p-4 text-center cursor-pointer transition-all bg-neutral-900/60 hover:bg-neutral-900 group"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center mx-auto mb-2 group-hover:scale-105 transition-transform">
+                      <UploadCloud className="w-5 h-5" />
+                    </div>
+                    <p className="text-white font-bold text-xs">Tomar Foto Paquete</p>
+                    <p className="text-[10px] text-neutral-400 mt-0.5">En puerta o entregado</p>
                   </div>
-                  <div className="flex items-center justify-between text-emerald-400 font-bold">
-                    <span>Tamaño ultra-comprimido:</span>
-                    <span className="font-mono">{formatearBytes(fotoComprimida.compressedSize)} (-{fotoComprimida.reductionPercent})</span>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="relative rounded-xl overflow-hidden border border-neutral-700 bg-black aspect-video flex items-center justify-center">
+                      <img
+                        src={fotoPaquete.base64}
+                        alt="Evidencia Paquete"
+                        className="w-full h-full object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setFotoPaquete(null)}
+                        className="absolute top-1.5 right-1.5 p-1 rounded-full bg-black/80 text-white hover:bg-black transition-colors"
+                        title="Cambiar foto de paquete"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <div className="text-[10px] text-emerald-400 font-semibold flex items-center justify-between px-1">
+                      <span>Optimizado:</span>
+                      <span className="font-mono">{formatearBytes(fotoPaquete.compressedSize)} (-{fotoPaquete.reductionPercent})</span>
+                    </div>
                   </div>
-                  <p className="text-[10px] text-neutral-500 pt-1 border-t border-neutral-800">
-                    ✓ Imagen optimizada para no saturar memoria ni consumir datos del repartidor.
-                  </p>
+                )}
+              </div>
+
+              {/* CASILLA 2: FOTO DEL DNI DEL CLIENTE */}
+              <div className="p-3.5 rounded-2xl bg-neutral-950/70 border border-neutral-800 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <IdCard className="w-4 h-4 text-teal-400" /> 2. Foto DNI Receptor
+                  </span>
+                  {fotoDni ? (
+                    <span className="text-[10px] font-bold text-emerald-400 flex items-center gap-1">
+                      <Check className="w-3 h-3" /> Listo
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-bold text-teal-400">Requerido</span>
+                  )}
                 </div>
+
+                {!fotoDni ? (
+                  <div
+                    onClick={() => fileInputDniRef.current?.click()}
+                    className="border-2 border-dashed border-neutral-700 hover:border-teal-500 rounded-xl p-4 text-center cursor-pointer transition-all bg-neutral-900/60 hover:bg-neutral-900 group"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-teal-500/10 border border-teal-500/20 text-teal-400 flex items-center justify-center mx-auto mb-2 group-hover:scale-105 transition-transform">
+                      <IdCard className="w-5 h-5" />
+                    </div>
+                    <p className="text-white font-bold text-xs">Tomar Foto DNI</p>
+                    <p className="text-[10px] text-neutral-400 mt-0.5">DNI físico del receptor</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="relative rounded-xl overflow-hidden border border-neutral-700 bg-black aspect-video flex items-center justify-center">
+                      <img
+                        src={fotoDni.base64}
+                        alt="Evidencia DNI"
+                        className="w-full h-full object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setFotoDni(null)}
+                        className="absolute top-1.5 right-1.5 p-1 rounded-full bg-black/80 text-white hover:bg-black transition-colors"
+                        title="Cambiar foto de DNI"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <div className="text-[10px] text-teal-400 font-semibold flex items-center justify-between px-1">
+                      <span>Optimizado:</span>
+                      <span className="font-mono">{formatearBytes(fotoDni.compressedSize)} (-{fotoDni.reductionPercent})</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+            </div>
+
+            {/* Spinner si se está procesando alguna foto */}
+            {procesandoFotoTipo && (
+              <div className="text-center py-1.5 text-xs text-amber-400 flex items-center justify-center gap-2">
+                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                <span>Comprimiendo {procesandoFotoTipo === 'paquete' ? 'foto de paquete' : 'foto de DNI'}...</span>
               </div>
             )}
 
-            {procesandoFoto && (
-              <div className="text-center py-2 text-xs text-amber-400 flex items-center justify-center gap-2">
-                <RefreshCw className="w-4 h-4 animate-spin" />
-                <span>Optimizando y comprimiendo foto...</span>
-              </div>
-            )}
+            {/* Indicador de estado de fotos */}
+            <div className="p-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-[11px] flex items-center justify-between">
+              <span className="text-neutral-400">Progreso de evidencias:</span>
+              <span className={`font-bold ${fotoPaquete && fotoDni ? 'text-emerald-400' : 'text-amber-400'}`}>
+                {fotoPaquete && fotoDni
+                  ? '✓ Ambas evidencias listas'
+                  : (!fotoPaquete && !fotoDni ? '0 de 2 fotos registradas' : '1 de 2 fotos registradas')}
+              </span>
+            </div>
 
             {/* Botones de acción */}
             <div className="pt-2 flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => setPedidoParaEntregar(null)}
-                className="w-1/3 py-2.5 rounded-xl bg-neutral-800 text-neutral-300 hover:text-white text-xs font-semibold"
+                className="w-1/3 py-2.5 rounded-xl bg-neutral-800 text-neutral-300 hover:text-white text-xs font-semibold cursor-pointer"
               >
                 Cancelar
               </button>
               <button
                 type="button"
                 onClick={confirmarEntregaConFoto}
-                disabled={guardandoEntrega || !fotoComprimida}
+                disabled={guardandoEntrega || !fotoPaquete || !fotoDni}
                 className="w-2/3 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-black font-black text-xs transition-all shadow-lg shadow-emerald-500/20 disabled:opacity-50 cursor-pointer"
               >
-                {guardandoEntrega ? 'Finalizando...' : 'Confirmar y Cerrar Pedido'}
+                {guardandoEntrega ? 'Finalizando y guardando...' : 'Confirmar y Cerrar Pedido'}
               </button>
             </div>
 
@@ -731,29 +850,123 @@ const MotorizadoDashboard = ({
         </div>
       )}
 
-      {/* ================= MODAL: VISOR DE FOTO DE EVIDENCIA ================= */}
-      {fotoParaVer && (
+      {/* ================= MODAL: ÉXITO POST-ENTREGA CON ENVÍO DE REPORTE A WHATSAPP ADMIN ================= */}
+      {reporteEntregaExito && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in">
+          <div className="w-full max-w-md bg-neutral-900 border border-emerald-500/40 rounded-3xl p-5 sm:p-6 shadow-2xl space-y-4 text-center">
+            <div className="w-14 h-14 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/20">
+              <CheckCircle2 className="w-8 h-8" />
+            </div>
+            
+            <div>
+              <h3 className="text-base sm:text-lg font-black text-white">¡Entrega Cerrada con Éxito!</h3>
+              <p className="text-xs text-neutral-300 mt-1">
+                Las evidencias de paquete y DNI fueron guardadas correctamente en tech mood.
+              </p>
+            </div>
+
+            {/* Resumen rápido del pedido entregado */}
+            <div className="p-3.5 rounded-2xl bg-neutral-950 border border-neutral-800 text-left text-xs space-y-1.5">
+              <div className="flex justify-between items-center pb-1.5 border-b border-neutral-800">
+                <span className="text-white font-mono font-bold">{reporteEntregaExito.codigo_seguimiento}</span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                  ENTREGADO
+                </span>
+              </div>
+              <div className="text-white font-bold">{reporteEntregaExito.nombre_cliente}</div>
+              <div className="text-neutral-400 text-[11px]">📍 {reporteEntregaExito.distrito_lima} • {reporteEntregaExito.direccion_entrega}</div>
+              <div className="text-[11px] font-semibold text-amber-300">
+                {reporteEntregaExito.metodo_pago === 'pagado' ? '💳 Pago Previo (Validado con DNI)' : '💵 Pago Contraentrega Recibido'}
+              </div>
+            </div>
+
+            {/* Botón WhatsApp directo al Admin */}
+            <div className="space-y-2 pt-1">
+              <a
+                href={generarUrlWhatsAppReporteAdmin(reporteEntregaExito)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-3 px-4 rounded-2xl bg-[#25D366] hover:bg-[#20ba5a] text-black font-black text-xs flex items-center justify-center gap-2 transition-all shadow-xl shadow-[#25D366]/25 cursor-pointer"
+              >
+                <MessageCircle className="w-4 h-4 fill-black" />
+                <span>Enviar Reporte a Admin (WhatsApp)</span>
+              </a>
+
+              <button
+                type="button"
+                onClick={() => setReporteEntregaExito(null)}
+                className="w-full py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white text-xs font-semibold transition-colors cursor-pointer"
+              >
+                Cerrar y Continuar Rutas
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: VISOR DE EVIDENCIAS REGISTRADAS (PAQUETE Y DNI) ================= */}
+      {evidenciasParaVer && (
         <div 
-          onClick={() => setFotoParaVer(null)}
+          onClick={() => setEvidenciasParaVer(null)}
           className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in"
         >
-          <div className="relative max-w-lg w-full bg-neutral-900 border border-neutral-800 rounded-3xl p-4 overflow-hidden">
-            <div className="flex items-center justify-between pb-3 border-b border-neutral-800 mb-3">
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="relative max-w-lg w-full bg-neutral-900 border border-neutral-800 rounded-3xl p-4 overflow-hidden space-y-3"
+          >
+            <div className="flex items-center justify-between pb-2.5 border-b border-neutral-800">
               <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                <ShieldCheck className="w-4 h-4 text-emerald-400" /> Evidencia Fotográfica Registrada
+                <ShieldCheck className="w-4 h-4 text-emerald-400" /> Evidencias de Entrega
               </span>
               <button 
-                onClick={() => setFotoParaVer(null)}
+                onClick={() => setEvidenciasParaVer(null)}
                 className="p-1 rounded-lg text-neutral-400 hover:text-white"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <img
-              src={fotoParaVer}
-              alt="Evidencia de entrega"
-              className="w-full max-h-[70vh] object-contain rounded-2xl bg-black"
-            />
+
+            {/* Pestañas si existen ambas fotos */}
+            {evidenciasParaVer.foto_entrega && evidenciasParaVer.foto_dni && (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEvidenciasParaVer(prev => ({ ...prev, tab: 'paquete' }))}
+                  className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                    evidenciasParaVer.tab === 'paquete'
+                      ? 'bg-amber-500/20 border border-amber-500/50 text-amber-300 shadow-sm'
+                      : 'bg-neutral-800/80 hover:bg-neutral-800 text-neutral-400'
+                  }`}
+                >
+                  <Camera className="w-3.5 h-3.5" />
+                  <span>Foto Paquete</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEvidenciasParaVer(prev => ({ ...prev, tab: 'dni' }))}
+                  className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                    evidenciasParaVer.tab === 'dni'
+                      ? 'bg-teal-500/20 border border-teal-500/50 text-teal-300 shadow-sm'
+                      : 'bg-neutral-800/80 hover:bg-neutral-800 text-neutral-400'
+                  }`}
+                >
+                  <IdCard className="w-3.5 h-3.5" />
+                  <span>Foto DNI</span>
+                </button>
+              </div>
+            )}
+
+            <div className="rounded-2xl overflow-hidden border border-neutral-800 bg-black flex items-center justify-center">
+              <img
+                src={
+                  evidenciasParaVer.tab === 'dni'
+                    ? (evidenciasParaVer.foto_dni || evidenciasParaVer.foto_entrega)
+                    : (evidenciasParaVer.foto_entrega || evidenciasParaVer.foto_dni)
+                }
+                alt="Evidencia fotográfica"
+                className="w-full max-h-[65vh] object-contain"
+              />
+            </div>
           </div>
         </div>
       )}

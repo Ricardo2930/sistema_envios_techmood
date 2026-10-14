@@ -3,7 +3,7 @@ import {
   ShieldCheck, Lock, Unlock, Search, RefreshCw, Copy, Check,
   Edit3, Trash2, ExternalLink, Package, Truck, Building2, CheckCircle2,
   AlertTriangle, X, Eye, EyeOff, MessageCircle,
-  FileSpreadsheet, Bike, BarChart3, Navigation, Camera, MapPin, Key
+  FileSpreadsheet, Bike, BarChart3, Navigation, Camera, MapPin, Key, IdCard
 } from 'lucide-react';
 import { obtenerPedidos, actualizarPedido, eliminarPedido, verificarEstadoSupabase } from '../services/pedidosService';
 import { descargarExcelMasivoShalom } from '../utils/shalomExcelExport';
@@ -61,8 +61,9 @@ const AdminDashboard = ({ onVerRastreo }) => {
   const [busqueda, setBusqueda] = useState('');
   const [exportandoExcel, setExportandoExcel] = useState(false);
 
-  // Visor de foto de evidencia
+  // Visor de fotos de evidencia (Paquete y DNI)
   const [fotoParaVer, setFotoParaVer] = useState(null);
+  const [tabEvidencia, setTabEvidencia] = useState('paquete'); // 'paquete' | 'dni'
 
   // Avisos toast
   const [toast, setToast] = useState(null);
@@ -1577,16 +1578,22 @@ const AdminDashboard = ({ onVerRastreo }) => {
                           </div>
                         )}
 
-                        {/* Indicador de Foto de Entrega */}
-                        {p.foto_entrega && (
+                        {/* Indicador de Fotos de Entrega (Paquete y DNI) */}
+                        {(p.foto_entrega || p.foto_dni) && (
                           <div className="mt-1">
                             <button
                               type="button"
-                              onClick={() => setFotoParaVer(p.foto_entrega)}
+                              onClick={() => {
+                                setFotoParaVer({
+                                  foto_entrega: p.foto_entrega,
+                                  foto_dni: p.foto_dni
+                                });
+                                setTabEvidencia(p.foto_entrega ? 'paquete' : 'dni');
+                              }}
                               className="text-[10px] text-emerald-400 hover:text-emerald-300 font-bold flex items-center gap-1 cursor-pointer"
                             >
                               <Camera className="w-3 h-3" />
-                              <span>Ver Evidencia</span>
+                              <span>Ver Evidencias</span>
                             </button>
                           </div>
                         )}
@@ -1617,29 +1624,6 @@ const AdminDashboard = ({ onVerRastreo }) => {
                                 >
                                   <MessageCircle className="w-3.5 h-3.5 fill-[#25D366]" />
                                   <span>Aviso Cliente</span>
-                                </a>
-                              )}
-
-                              {/* Botón WhatsApp Aviso Admin */}
-                              {avisosEnviados[p.id]?.admin ? (
-                                <span
-                                  className="p-1.5 px-2 rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-400 text-xs font-semibold inline-flex items-center gap-1 cursor-not-allowed opacity-80"
-                                  title="Reporte de entrega ya enviado a tech mood Admin"
-                                >
-                                  <Check className="w-3.5 h-3.5 text-emerald-400" />
-                                  <span>✔️ Admin Avisado</span>
-                                </span>
-                              ) : (
-                                <a
-                                  href={generarLinkWhatsAppEntregaAdmin(p)}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  onClick={() => registrarAvisoEnviado(p.id, 'admin')}
-                                  className="p-1.5 px-2 rounded-lg bg-emerald-500/20 border border-emerald-500/40 hover:bg-emerald-500/30 text-emerald-300 text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1 shadow-sm"
-                                  title="Enviar reporte de entrega completada a tech mood Admin"
-                                >
-                                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                                  <span>Aviso Admin</span>
                                 </a>
                               )}
 
@@ -2000,15 +1984,21 @@ const AdminDashboard = ({ onVerRastreo }) => {
                 </div>
 
                 {/* Evidencia fotográfica si existe */}
-                {p.foto_entrega && (
+                {(p.foto_entrega || p.foto_dni) && (
                   <div className="pt-0.5">
                     <button
                       type="button"
-                      onClick={() => setFotoParaVer(p.foto_entrega)}
+                      onClick={() => {
+                        setFotoParaVer({
+                          foto_entrega: p.foto_entrega,
+                          foto_dni: p.foto_dni
+                        });
+                        setTabEvidencia(p.foto_entrega ? 'paquete' : 'dni');
+                      }}
                       className="text-[11px] text-emerald-400 hover:text-emerald-300 font-bold flex items-center gap-1 cursor-pointer"
                     >
                       <Camera className="w-3.5 h-3.5" />
-                      <span>Ver Foto de Entrega (Evidencia)</span>
+                      <span>Ver Evidencias (Paquete / DNI)</span>
                     </button>
                   </div>
                 )}
@@ -2571,10 +2561,13 @@ const AdminDashboard = ({ onVerRastreo }) => {
           onClick={() => setFotoParaVer(null)}
           className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in"
         >
-          <div className="relative max-w-lg w-full bg-neutral-900 border border-neutral-800 rounded-3xl p-4 overflow-hidden">
-            <div className="flex items-center justify-between pb-3 border-b border-neutral-800 mb-3">
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="relative max-w-lg w-full bg-neutral-900 border border-neutral-800 rounded-3xl p-4 overflow-hidden space-y-3"
+          >
+            <div className="flex items-center justify-between pb-2.5 border-b border-neutral-800">
               <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                <ShieldCheck className="w-4 h-4 text-emerald-400" /> Comprobante de Entrega
+                <ShieldCheck className="w-4 h-4 text-emerald-400" /> Evidencias de Entrega
               </span>
               <button 
                 onClick={() => setFotoParaVer(null)}
@@ -2583,11 +2576,50 @@ const AdminDashboard = ({ onVerRastreo }) => {
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <img
-              src={fotoParaVer}
-              alt="Evidencia fotográfica"
-              className="w-full max-h-[70vh] object-contain rounded-2xl bg-black"
-            />
+
+            {/* Pestañas si existen ambas evidencias registradas */}
+            {typeof fotoParaVer === 'object' && fotoParaVer.foto_entrega && fotoParaVer.foto_dni && (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setTabEvidencia('paquete')}
+                  className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                    tabEvidencia === 'paquete'
+                      ? 'bg-amber-500/20 border border-amber-500/50 text-amber-300 shadow-sm'
+                      : 'bg-neutral-800/80 hover:bg-neutral-800 text-neutral-400'
+                  }`}
+                >
+                  <Camera className="w-3.5 h-3.5" />
+                  <span>Foto Paquete</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTabEvidencia('dni')}
+                  className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                    tabEvidencia === 'dni'
+                      ? 'bg-teal-500/20 border border-teal-500/50 text-teal-300 shadow-sm'
+                      : 'bg-neutral-800/80 hover:bg-neutral-800 text-neutral-400'
+                  }`}
+                >
+                  <IdCard className="w-3.5 h-3.5" />
+                  <span>Foto DNI Receptor</span>
+                </button>
+              </div>
+            )}
+
+            <div className="rounded-2xl overflow-hidden border border-neutral-800 bg-black flex items-center justify-center">
+              <img
+                src={
+                  typeof fotoParaVer === 'string'
+                    ? fotoParaVer
+                    : (tabEvidencia === 'dni'
+                        ? (fotoParaVer.foto_dni || fotoParaVer.foto_entrega)
+                        : (fotoParaVer.foto_entrega || fotoParaVer.foto_dni))
+                }
+                alt="Evidencia fotográfica"
+                className="w-full max-h-[65vh] object-contain"
+              />
+            </div>
           </div>
         </div>
       )}
