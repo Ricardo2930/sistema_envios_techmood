@@ -673,90 +673,101 @@ const AnalyticsDashboard = ({ pedidos = [] }) => {
         {/* 3. CONTENEDOR DEL GRÁFICO SVG CON TOOLTIP PROFESIONAL */}
         <div className="relative pt-2">
           
-          {/* TOOLTIP FLOTANTE GLASSMORPHIC PROFESIONAL */}
-          {barraActiva && (
-            <div 
-              className="absolute z-20 pointer-events-auto transition-all duration-200 transform -translate-x-1/2"
-              style={{
-                left: `${Math.max(18, Math.min(82, barraActiva.posPct))}%`,
-                top: '-8px'
-              }}
-            >
-              <div className="bg-neutral-950/95 border border-cyan-500/40 rounded-2xl p-3.5 shadow-2xl shadow-cyan-950/80 backdrop-blur-xl w-64 text-xs text-white space-y-2.5 animate-in fade-in zoom-in-95 duration-150">
-                
-                {/* Cabecera del Tooltip */}
-                <div className="flex items-center justify-between border-b border-neutral-800 pb-2">
-                  <div className="flex items-center gap-1.5">
-                    <Calendar className="w-3.5 h-3.5 text-cyan-400" />
-                    <span className="font-bold text-neutral-200 truncate">{barraActiva.labelFull}</span>
+          {/* TOOLTIP FLOTANTE GLASSMORPHIC PROFESIONAL CON SMART CLAMPING RESPONSIVO */}
+          {barraActiva && (() => {
+            const pos = barraActiva.posPct || 50;
+            const isRightSide = pos > 50;
+            const clampedDesktop = Math.max(16, Math.min(84, pos));
+
+            return (
+              <div 
+                className={`absolute z-30 pointer-events-auto transition-all duration-200 ${
+                  isRightSide 
+                    ? 'right-2 sm:right-auto sm:left-[var(--tooltip-x)] sm:-translate-x-1/2' 
+                    : 'left-2 sm:left-[var(--tooltip-x)] sm:-translate-x-1/2'
+                }`}
+                style={{
+                  '--tooltip-x': `${clampedDesktop}%`,
+                  top: '-8px'
+                }}
+              >
+                <div className="bg-neutral-950/95 border border-cyan-500/40 rounded-2xl p-3 sm:p-3.5 shadow-2xl shadow-cyan-950/80 backdrop-blur-xl w-[265px] sm:w-64 max-w-[calc(100vw-3.2rem)] text-xs text-white space-y-2.5 animate-in fade-in zoom-in-95 duration-150">
+                  
+                  {/* Cabecera del Tooltip */}
+                  <div className="flex items-center justify-between border-b border-neutral-800 pb-2">
+                    <div className="flex items-center gap-1.5 min-w-0 pr-1">
+                      <Calendar className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                      <span className="font-bold text-neutral-200 truncate">{barraActiva.labelFull}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setBarraActiva(null)}
+                      className="text-neutral-500 hover:text-white p-0.5 rounded transition shrink-0 cursor-pointer"
+                      title="Cerrar detalle"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setBarraActiva(null)}
-                    className="text-neutral-500 hover:text-white p-0.5 rounded transition"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </div>
 
-                {/* Total */}
-                <div className="flex items-center justify-between">
-                  <span className="text-neutral-400">Total Despachos:</span>
-                  <span className="font-mono font-black text-base text-white">
-                    {barraActiva.total} <span className="text-[10px] text-neutral-400 font-normal">pedidos</span>
-                  </span>
-                </div>
-
-                {/* Barra Mini Proporcional */}
-                {barraActiva.total > 0 && (
-                  <div className="w-full h-1.5 rounded-full bg-neutral-800 overflow-hidden flex">
-                    <div 
-                      style={{ width: `${Math.round((barraActiva.lima / barraActiva.total) * 100)}%` }} 
-                      className="h-full bg-cyan-400" 
-                    />
-                    <div 
-                      style={{ width: `${Math.round((barraActiva.provincia / barraActiva.total) * 100)}%` }} 
-                      className="h-full bg-amber-400" 
-                    />
-                  </div>
-                )}
-
-                {/* Detalle Segmentado */}
-                <div className="space-y-1.5 pt-0.5">
+                  {/* Total */}
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-sm shadow-cyan-400/50" />
-                      <span className="text-neutral-300">Lima Express</span>
+                    <span className="text-neutral-400">Total Despachos:</span>
+                    <span className="font-mono font-black text-base text-white">
+                      {barraActiva.total} <span className="text-[10px] text-neutral-400 font-normal">pedidos</span>
+                    </span>
+                  </div>
+
+                  {/* Barra Mini Proporcional */}
+                  {barraActiva.total > 0 && (
+                    <div className="w-full h-1.5 rounded-full bg-neutral-800 overflow-hidden flex">
+                      <div 
+                        style={{ width: `${Math.round((barraActiva.lima / barraActiva.total) * 100)}%` }} 
+                        className="h-full bg-cyan-400" 
+                      />
+                      <div 
+                        style={{ width: `${Math.round((barraActiva.provincia / barraActiva.total) * 100)}%` }} 
+                        className="h-full bg-amber-400" 
+                      />
                     </div>
-                    <div className="font-mono font-bold text-cyan-300">
-                      {barraActiva.lima} <span className="text-[10px] text-neutral-500">({barraActiva.total > 0 ? Math.round((barraActiva.lima / barraActiva.total) * 100) : 0}%)</span>
+                  )}
+
+                  {/* Detalle Segmentado */}
+                  <div className="space-y-1.5 pt-0.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-sm shadow-cyan-400/50" />
+                        <span className="text-neutral-300">Lima Express</span>
+                      </div>
+                      <div className="font-mono font-bold text-cyan-300">
+                        {barraActiva.lima} <span className="text-[10px] text-neutral-500">({barraActiva.total > 0 ? Math.round((barraActiva.lima / barraActiva.total) * 100) : 0}%)</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-sm shadow-amber-400/50" />
+                        <span className="text-neutral-300">Envíos Provincia</span>
+                      </div>
+                      <div className="font-mono font-bold text-amber-300">
+                        {barraActiva.provincia} <span className="text-[10px] text-neutral-500">({barraActiva.total > 0 ? Math.round((barraActiva.provincia / barraActiva.total) * 100) : 0}%)</span>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-sm shadow-amber-400/50" />
-                      <span className="text-neutral-300">Envíos Provincia</span>
-                    </div>
-                    <div className="font-mono font-bold text-amber-300">
-                      {barraActiva.provincia} <span className="text-[10px] text-neutral-500">({barraActiva.total > 0 ? Math.round((barraActiva.provincia / barraActiva.total) * 100) : 0}%)</span>
-                    </div>
+                  {/* Tasa de entregados */}
+                  <div className="border-t border-neutral-800/80 pt-2 flex items-center justify-between text-[11px] text-neutral-400">
+                    <span className="flex items-center gap-1 text-emerald-400">
+                      <CheckCircle2 className="w-3 h-3 shrink-0" /> Entregados:
+                    </span>
+                    <span className="font-mono font-bold text-emerald-300">
+                      {barraActiva.entregados} de {barraActiva.total}
+                    </span>
                   </div>
-                </div>
 
-                {/* Tasa de entregados */}
-                <div className="border-t border-neutral-800/80 pt-2 flex items-center justify-between text-[11px] text-neutral-400">
-                  <span className="flex items-center gap-1 text-emerald-400">
-                    <CheckCircle2 className="w-3 h-3" /> Entregados:
-                  </span>
-                  <span className="font-mono font-bold text-emerald-300">
-                    {barraActiva.entregados} de {barraActiva.total}
-                  </span>
                 </div>
-
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* ÁREA SCROLLABLE DEL SVG PARA MOBILE */}
           <div className="w-full overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-neutral-800">

@@ -2110,7 +2110,7 @@ const AdminDashboard = ({ onVerRastreo }) => {
                         href={obtenerUrlWhatsAppCliente(p)}
                         target="_blank"
                         rel="noreferrer"
-                        className="px-2.5 py-1 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[10px] font-medium flex items-center gap-1"
+                        className="px-2 py-1 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[11px] font-semibold flex items-center gap-1"
                       >
                         <MessageCircle className="w-3 h-3" /> WhatsApp
                       </a>
