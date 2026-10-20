@@ -383,7 +383,7 @@ const OrderTracking = ({ codigoInicial = '', onIrAFormulario }) => {
                     </div>
                   </div>
 
-                  {/* Paso 3: En Origen (NUEVO) */}
+                  {/* Paso 3: En Origen */}
                   <div className="flex sm:flex-col items-center sm:text-center gap-3 sm:gap-1.5">
                     <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-xs shrink-0 transition-all ${
                       pasoActual >= 3 ? 'bg-cyan-500 text-black shadow-lg shadow-cyan-500/30' : 'bg-neutral-800 text-neutral-400'

@@ -87,6 +87,11 @@ ALTER TABLE public.pedidos ADD COLUMN IF NOT EXISTS metodo_pago VARCHAR(30) DEFA
 ALTER TABLE public.pedidos ADD COLUMN IF NOT EXISTS link_rastreo TEXT NULL;
 ALTER TABLE public.pedidos ADD COLUMN IF NOT EXISTS tipo_mercaderia VARCHAR(30) DEFAULT 'PAQUETE XS';
 
+-- Saneamiento preventivo: Solo las órdenes 'entregado' pueden tener fecha_entregado
+UPDATE public.pedidos 
+SET fecha_entregado = NULL 
+WHERE estado != 'entregado' AND fecha_entregado IS NOT NULL;
+
 -- 5. Trigger automático para actualizar timestamp en cada UPDATE
 CREATE OR REPLACE FUNCTION update_pedidos_timestamp()
 RETURNS TRIGGER AS $$

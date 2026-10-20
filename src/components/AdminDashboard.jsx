@@ -3,7 +3,8 @@ import {
   ShieldCheck, Lock, Unlock, Search, RefreshCw, Copy, Check,
   Edit3, Trash2, ExternalLink, Package, Truck, Building2, CheckCircle2,
   AlertTriangle, X, Eye, EyeOff, MessageCircle,
-  FileSpreadsheet, Bike, BarChart3, Navigation, Camera, MapPin, Key, IdCard, RotateCcw
+  FileSpreadsheet, Bike, BarChart3, Navigation, Camera, MapPin, Key, IdCard, RotateCcw,
+  History, Clock
 } from 'lucide-react';
 import { obtenerPedidos, actualizarPedido, eliminarPedido, verificarEstadoSupabase } from '../services/pedidosService';
 import { descargarExcelMasivoShalom } from '../utils/shalomExcelExport';
@@ -64,6 +65,24 @@ const AdminDashboard = ({ onVerRastreo }) => {
   // Visor de fotos de evidencia (Paquete y DNI)
   const [fotoParaVer, setFotoParaVer] = useState(null);
   const [tabEvidencia, setTabEvidencia] = useState('paquete'); // 'paquete' | 'dni'
+
+  // Modal de Bitácora / Historial completo de estados con fecha y hora
+  const [pedidoParaVerHistorial, setPedidoParaVerHistorial] = useState(null);
+
+  // Helper para obtener fecha y hora del estado actual de un pedido
+  const obtenerFechaUltimoEstado = (p) => {
+    if (Array.isArray(p.historial_estados) && p.historial_estados.length > 0) {
+      for (let i = p.historial_estados.length - 1; i >= 0; i--) {
+        const h = p.historial_estados[i];
+        if (h && h.estado === p.estado && h.fecha) {
+          return h.fecha;
+        }
+      }
+      const ultimo = p.historial_estados[p.historial_estados.length - 1];
+      if (ultimo && ultimo.fecha) return ultimo.fecha;
+    }
+    return p.actualizado_en || p.creado_en || null;
+  };
 
   // Avisos toast
   const [toast, setToast] = useState(null);
@@ -1393,7 +1412,7 @@ const AdminDashboard = ({ onVerRastreo }) => {
                             Prev: {p.fecha_prevista}
                           </div>
                         )}
-                        {p.fecha_entregado && (
+                        {p.estado === 'entregado' && p.fecha_entregado && (
                           <div className="text-[10px] text-emerald-400 font-mono font-medium mt-0.5 flex items-center gap-1">
                             <CheckCircle2 className="w-2.5 h-2.5" />
                             {new Date(p.fecha_entregado).toLocaleDateString('es-PE', {
@@ -1589,14 +1608,41 @@ const AdminDashboard = ({ onVerRastreo }) => {
 
                       {/* Estado */}
                       <td className="py-3.5 px-4 whitespace-nowrap">
-                        {(() => {
-                          const badge = obtenerBadgeEstado(p, esLima);
-                          return (
-                            <span className={`px-2.5 py-1 rounded-full text-[11px] ${badge.clase}`}>
-                              {badge.texto}
-                            </span>
-                          );
-                        })()}
+                        <div className="flex flex-col gap-1 items-start">
+                          <div className="flex items-center gap-1.5">
+                            {(() => {
+                              const badge = obtenerBadgeEstado(p, esLima);
+                              return (
+                                <span className={`px-2.5 py-1 rounded-full text-[11px] ${badge.clase}`}>
+                                  {badge.texto}
+                                </span>
+                              );
+                            })()}
+                            <button
+                              type="button"
+                              onClick={() => setPedidoParaVerHistorial(p)}
+                              className="p-1 rounded-md text-neutral-500 hover:text-amber-400 hover:bg-neutral-800 transition-colors cursor-pointer"
+                              title="Ver bitácora de fechas y horas por cada estado"
+                            >
+                              <History className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+
+                          {/* Fecha y hora del estado actual */}
+                          {(() => {
+                            const fechaEstado = obtenerFechaUltimoEstado(p);
+                            if (!fechaEstado) return null;
+                            return (
+                              <span className="text-[10px] text-neutral-400 font-mono flex items-center gap-1 pl-0.5" title="Fecha y hora en que entró a este estado">
+                                <Clock className="w-2.5 h-2.5 text-neutral-500 shrink-0" />
+                                {new Date(fechaEstado).toLocaleDateString('es-PE', {
+                                  day: '2-digit', month: '2-digit',
+                                  hour: '2-digit', minute: '2-digit'
+                                })}
+                              </span>
+                            );
+                          })()}
+                        </div>
                         
                         {/* Selector de Condición de Pago para Lima Express (Opción A) */}
                         {esLima && (
@@ -1902,7 +1948,7 @@ const AdminDashboard = ({ onVerRastreo }) => {
 
                     {/* Indicador de Fecha de Entrega o Prevista + Registro */}
                     <div className="space-y-0.5 mt-0.5">
-                      {p.fecha_entregado ? (
+                      {(p.estado === 'entregado' && p.fecha_entregado) ? (
                         <div className="flex items-center gap-1 text-[10px] text-emerald-400 font-mono font-bold">
                           <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0" />
                           <span>Entregado: {new Date(p.fecha_entregado).toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
@@ -1919,9 +1965,32 @@ const AdminDashboard = ({ onVerRastreo }) => {
                   </div>
 
                   <div className="flex flex-col items-end gap-1">
-                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${badge.clase}`}>
-                      {badge.texto}
-                    </span>
+                    <div className="flex items-center gap-1">
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${badge.clase}`}>
+                        {badge.texto}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setPedidoParaVerHistorial(p)}
+                        className="p-1 rounded-md text-neutral-500 hover:text-amber-400 hover:bg-neutral-800 transition-colors"
+                        title="Ver bitácora de estados"
+                      >
+                        <History className="w-3 h-3" />
+                      </button>
+                    </div>
+                    {(() => {
+                      const fechaEstado = obtenerFechaUltimoEstado(p);
+                      if (!fechaEstado) return null;
+                      return (
+                        <span className="text-[9.5px] text-neutral-400 font-mono flex items-center gap-1">
+                          <Clock className="w-2.5 h-2.5 text-neutral-500" />
+                          {new Date(fechaEstado).toLocaleDateString('es-PE', {
+                            day: '2-digit', month: '2-digit',
+                            hour: '2-digit', minute: '2-digit'
+                          })}
+                        </span>
+                      );
+                    })()}
                     {esLima ? (
                       <div className="flex items-center gap-1">
                         <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 flex items-center gap-1">
@@ -2867,6 +2936,149 @@ const AdminDashboard = ({ onVerRastreo }) => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Profesional de Bitácora / Historial de Estados con Fecha y Hora */}
+      {pedidoParaVerHistorial && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in"
+          onClick={() => setPedidoParaVerHistorial(null)}
+        >
+          <div 
+            className="relative w-full max-w-lg bg-neutral-900 border border-neutral-800 rounded-3xl shadow-2xl p-5 sm:p-6 overflow-hidden max-h-[90vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Cabecera */}
+            <div className="flex items-center justify-between pb-4 border-b border-neutral-800 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shadow-inner">
+                  <History className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-white flex items-center gap-2">
+                    <span>Bitácora de Estados</span>
+                    <span className="text-xs font-mono font-bold text-amber-400 px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20">
+                      {pedidoParaVerHistorial.codigo_seguimiento}
+                    </span>
+                  </h3>
+                  <p className="text-xs text-neutral-400">
+                    {pedidoParaVerHistorial.nombre_cliente} • {pedidoParaVerHistorial.tipo_envio === 'lima_metropolitana' ? 'Lima Express' : pedidoParaVerHistorial.courier?.toUpperCase()}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPedidoParaVerHistorial(null)}
+                className="p-2 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors cursor-pointer"
+                title="Cerrar bitácora"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Resumen rápido */}
+            <div className="py-3 px-3.5 my-3 rounded-2xl bg-neutral-950 border border-neutral-800/80 flex items-center justify-between shrink-0">
+              <div className="text-xs">
+                <span className="text-neutral-500 block text-[10px] uppercase font-bold">Estado Actual:</span>
+                <span className="font-bold text-neutral-200">
+                  {pedidoParaVerHistorial.estado === 'registrado' && '1. Registrado (Sin emitir)'}
+                  {pedidoParaVerHistorial.estado === 'asignado' && '2. Asignado a Motorizado'}
+                  {pedidoParaVerHistorial.estado === 'en_preparacion' && '2. En Preparación (Almacén)'}
+                  {pedidoParaVerHistorial.estado === 'en_origen' && '3. En Agencia Origen (Lima)'}
+                  {pedidoParaVerHistorial.estado === 'en_transito' && '4. En Tránsito / En Ruta'}
+                  {pedidoParaVerHistorial.estado === 'en_agencia' && '5. En Agencia Destino'}
+                  {pedidoParaVerHistorial.estado === 'entregado' && '6. Entregado con Éxito'}
+                  {pedidoParaVerHistorial.estado === 'incidencia' && 'Incidencia'}
+                </span>
+              </div>
+              <div className="text-right text-xs">
+                <span className="text-neutral-500 block text-[10px] uppercase font-bold">DNI Destinatario:</span>
+                <span className="font-mono text-neutral-300 font-bold">{pedidoParaVerHistorial.dni_cliente}</span>
+              </div>
+            </div>
+
+            {/* Lista Timeline de Eventos */}
+            <div className="overflow-y-auto space-y-4 pr-1 py-1 flex-1">
+              {Array.isArray(pedidoParaVerHistorial.historial_estados) && pedidoParaVerHistorial.historial_estados.length > 0 ? (
+                pedidoParaVerHistorial.historial_estados.map((evento, idx) => {
+                  const esUltimo = idx === pedidoParaVerHistorial.historial_estados.length - 1;
+                  const fechaObj = evento.fecha ? new Date(evento.fecha) : null;
+
+                  return (
+                    <div key={idx} className="relative flex items-start gap-3 pl-1">
+                      {/* Línea vertical conectora */}
+                      {!esUltimo && (
+                        <div className="absolute left-[17px] top-8 bottom-0 w-0.5 bg-neutral-800" />
+                      )}
+
+                      {/* Icono del nodo */}
+                      <div className={`relative z-10 w-8 h-8 rounded-xl flex items-center justify-center shrink-0 text-xs font-bold ${
+                        esUltimo
+                          ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/25 ring-2 ring-amber-500/30'
+                          : 'bg-neutral-800 text-neutral-400 border border-neutral-700'
+                      }`}>
+                        {evento.estado === 'entregado' ? (
+                          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                        ) : evento.estado === 'en_agencia' ? (
+                          <Building2 className="w-4 h-4" />
+                        ) : evento.estado === 'en_transito' ? (
+                          <Truck className="w-4 h-4" />
+                        ) : evento.estado === 'en_origen' ? (
+                          <Building2 className="w-4 h-4 text-cyan-400" />
+                        ) : evento.estado === 'en_preparacion' ? (
+                          <Package className="w-4 h-4 text-amber-300" />
+                        ) : (
+                          <Clock className="w-4 h-4" />
+                        )}
+                      </div>
+
+                      {/* Contenido del evento */}
+                      <div className="flex-1 pb-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className={`text-xs font-bold ${esUltimo ? 'text-amber-300' : 'text-neutral-200'}`}>
+                            {evento.estado === 'registrado' && '1. Registrado'}
+                            {evento.estado === 'asignado' && '2. Asignado'}
+                            {evento.estado === 'en_preparacion' && '2. En Preparación'}
+                            {evento.estado === 'en_origen' && '3. En Agencia Origen'}
+                            {evento.estado === 'en_transito' && '4. En Tránsito'}
+                            {evento.estado === 'en_agencia' && '5. En Agencia Destino'}
+                            {evento.estado === 'entregado' && '6. Entregado con Éxito'}
+                            {evento.estado === 'incidencia' && 'Incidencia'}
+                          </span>
+                          {fechaObj && (
+                            <span className="text-[10.5px] font-mono text-neutral-400 bg-neutral-950 px-2 py-0.5 rounded-md border border-neutral-800">
+                              {fechaObj.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' })} • {fechaObj.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                            </span>
+                          )}
+                        </div>
+                        {evento.detalle && (
+                          <p className="text-[11.5px] text-neutral-400 mt-1 leading-relaxed bg-neutral-950/50 p-2 rounded-xl border border-neutral-800/60">
+                            {evento.detalle}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="text-center py-6 text-neutral-500 text-xs">
+                  No hay eventos registrados en la bitácora aún.
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="pt-3 border-t border-neutral-800 flex justify-end shrink-0">
+              <button
+                type="button"
+                onClick={() => setPedidoParaVerHistorial(null)}
+                className="px-4 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white font-bold text-xs transition-colors cursor-pointer"
+              >
+                Cerrar
+              </button>
+            </div>
           </div>
         </div>
       )}

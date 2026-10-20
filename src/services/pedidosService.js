@@ -312,12 +312,25 @@ export async function buscarPedido(termino) {
 // 4. Actualizar Guía, Estado, Motorizado o Foto de Entrega
 export async function actualizarPedido(id, camposActualizados) {
   const ahora = new Date().toISOString();
+
+  // Control estricto y coherente de fecha_entregado:
+  // - Si el estado pasa a 'entregado': se asigna la estampa temporal si no se especificó una.
+  // - Si el estado es cualquier otro distinto de 'entregado': se limpia obligatoriamente a null.
+  let fechaEntregadoUpdate = {};
+  if (camposActualizados.estado) {
+    if (camposActualizados.estado === 'entregado') {
+      if (!camposActualizados.fecha_entregado) {
+        fechaEntregadoUpdate = { fecha_entregado: ahora };
+      }
+    } else {
+      fechaEntregadoUpdate = { fecha_entregado: null };
+    }
+  }
+
   const payload = {
     ...camposActualizados,
     actualizado_en: ahora,
-    ...(camposActualizados.estado === 'entregado' && !camposActualizados.fecha_entregado
-      ? { fecha_entregado: ahora }
-      : {})
+    ...fechaEntregadoUpdate
   };
 
   if (isSupabaseConfigured) {
